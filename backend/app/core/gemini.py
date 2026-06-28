@@ -43,17 +43,18 @@ def gerar_roteiro_ia(dados: dict) -> str:
         ESTRUTURA OBRIGATÓRIA DA SUA RESPOSTA:
         Você deve dividir sua resposta em duas partes, usando formatação Markdown. Separe-as EXATAMENTE por esta tag: --- ATA OFICIAL ---
 
-        ### PARTE 1: ROTEIRO DO LÍDER (Confidencial)
+        ROTEIRO DO LÍDER (Confidencial)
         - Crie o roteiro da 1:1 dividido em: Abertura, Desenvolvimento da Pauta e Próximos Passos.
+        - OBRIGATÓRIO: O "Desenvolvimento da Pauta" DEVE ser 100% focado neste assunto: "{entregas}". Aborde DIRETAMENTE os problemas, absurdos ou sucessos relatados aqui, preparando o líder para lidar com ESSA situação específica.
         - Dê dicas de postura e correções de tom baseadas no perfil do Líder ({perfil_lider}).
         - Sugira perguntas focadas no momento atual do liderado ({perfil_comportamental}).
 
         --- ATA OFICIAL ---
 
-        ### PARTE 2: RESUMO DO ALINHAMENTO
+        RESUMO DO ALINHAMENTO
         - Escreva de forma formal, impessoal e corporativa (este texto irá para o RH).
         - Comece OBRIGATORIAMENTE com: "Nesta reunião de alinhamento, conversamos sobre os seguintes tópicos..."
-        - Faça o resumo dos pontos abordados (foco em: {entregas}) e crie sugestões de acordos firmados.
+        - Faça o resumo profissional focado em: {entregas}. Crie sugestões de acordos firmados.
         """
         
         response = model.generate_content(prompt)
