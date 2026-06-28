@@ -1,5 +1,3 @@
-# backend/app/core/gemini.py
-
 import os
 import google.generativeai as genai
 from dotenv import load_dotenv
@@ -16,25 +14,46 @@ if not api_key:
 genai.configure(api_key=api_key)
 
 def gerar_roteiro_ia(dados: dict) -> str:
-    """
-    Função principal que monta o prompt e conversa com o Gemini.
-    Recebe um dicionário com os dados do formulário e retorna o Markdown.
-    """
+
+    perfil_lider = dados.get("perfil_lideranca", "Não especificado")
+    senioridade = dados.get("senioridade_liderado", "Não especificado")
+    tempo_casa = dados.get("tempo_casa", "Não especificado")
+    perfil_comportamental = dados.get("perfil_comportamental", "Não especificado")
+    entregas = dados.get("resumo_entregas", "Nenhuma entrega relatada")
+
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-3.1-flash-lite')
         
         prompt = f"""
-        Aja como um sistema especialista de liderança corporativa da Clear IT.
-        Gere APENAS o roteiro estruturado da reunião 1:1 em formato Markdown. 
-        REGRA DE OURO: NÃO inclua saudações. Vá direto para o conteúdo.
-        DIRETRIZ DE PRIVACIDADE (LGPD): NÃO invente nomes reais. Use termos genéricos.
+        Você é um Mentor Executivo e parceiro de RH estratégico da empresa Clear IT.
+        Seu objetivo é preparar o líder para uma reunião de 1:1 e, ao mesmo tempo, redigir a Ata Oficial desse encontro (sem usar nomes próprios para manter a conformidade com a LGPD).
+        
+        CONTEXTO DA REUNIÃO:
+        - Perfil do Líder (quem vai conduzir): {perfil_lider}
+        - Senioridade do Liderado: {senioridade}
+        - Tempo de Casa: {tempo_casa}
+        - Momento / Perfil Comportamental: {perfil_comportamental}
+        - Foco / Entregas Recentes: {entregas}
 
-        CONTEXTO:
-        - Perfil Líder: {dados['perfil_lider']}
-        - Liderado: {dados['senioridade']} | Tempo: {dados['tempo_empresa']}
-        - Perfil Comportamental: {dados['perfil_comportamental']}
-        - Pauta: {dados['pauta']}
-        - Acordos Prévios: {dados.get('acordos', 'Nenhum')}
+        REGRAS DE TOM DE VOZ PARA O LÍDER (CRÍTICO):
+        - Se o líder for "Técnico": Use linguagem ultra-direta, sem jargão de RH, foque em dados e metas.
+        - Se o líder for "Em Transição": Dê dicas de empatia, escuta ativa e como conduzir conversas difíceis sem parecer autoritário.
+        - Se o líder for "Engajado": Foque em estruturar o tempo, evitar dispersão e definir próximos passos muito práticos.
+
+        ESTRUTURA OBRIGATÓRIA DA SUA RESPOSTA:
+        Você deve dividir sua resposta em duas partes, usando formatação Markdown. Separe-as EXATAMENTE por esta tag: --- ATA OFICIAL ---
+
+        ### PARTE 1: ROTEIRO DO LÍDER (Confidencial)
+        - Crie o roteiro da 1:1 dividido em: Abertura, Desenvolvimento da Pauta e Próximos Passos.
+        - Dê dicas de postura e correções de tom baseadas no perfil do Líder ({perfil_lider}).
+        - Sugira perguntas focadas no momento atual do liderado ({perfil_comportamental}).
+
+        --- ATA OFICIAL ---
+
+        ### PARTE 2: RESUMO DO ALINHAMENTO
+        - Escreva de forma formal, impessoal e corporativa (este texto irá para o RH).
+        - Comece OBRIGATORIAMENTE com: "Nesta reunião de alinhamento, conversamos sobre os seguintes tópicos..."
+        - Faça o resumo dos pontos abordados (foco em: {entregas}) e crie sugestões de acordos firmados.
         """
         
         response = model.generate_content(prompt)

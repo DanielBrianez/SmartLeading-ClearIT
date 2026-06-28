@@ -1,24 +1,47 @@
-# 🏢 Contexto de Negócio (Business Context)
+# 👤 Histórias de Usuário (User Stories)
 
-## 1. Visão Geral (Elevator Pitch)
-O **Smart Leading - Clear IT** é uma plataforma corporativa projetada para transformar a maneira como líderes conduzem suas reuniões de 1:1 (One-on-One). Através de Inteligência Artificial paramétrica e ferramentas de gamificação, o sistema garante que os alinhamentos sejam estruturados, documentados com segurança (LGPD) e gerem dados acionáveis para o setor de Recursos Humanos.
+As histórias de usuário abaixo detalham as necessidades dos diferentes atores envolvidos no ecossistema do **Smart Leading**, orientando o desenvolvimento e as prioridades do MVP.
 
-## 2. O Problema (Pain Points)
-Atualmente, o processo de gestão de pessoas e acompanhamento contínuo na Clear IT sofre com três dores principais:
-1. **Falta de Estrutura:** Líderes gastam muito tempo planejando pautas ou, pior, conduzem conversas reativas e sem foco no desenvolvimento comportamental.
-2. **Ausência de Governança (Risco Trabalhista):** As reuniões não são formalmente documentadas. Não há registro de acordos, metas ou feedbacks, expondo a empresa a riscos e dificultando o acompanhamento histórico.
-3. **Ponto Cego do RH:** O departamento de People/RH não consegue medir se os líderes estão de fato engajando e desenvolvendo seus liderados, pois não há telemetria sobre a frequência ou qualidade dessas conversas que respeite a privacidade.
+## Épico 1: Preparação e Condução da 1:1
+**US01 - Geração de Roteiro Inteligente**
+> **Como** líder, 
+> **Eu quero** inserir os perfis comportamentais e as últimas entregas do meu liderado, 
+> **Para que** a IA gere um roteiro de 1:1 estruturado, focado e personalizado, reduzindo meu tempo de preparação.
 
-## 3. A Solução
-O Assistente de Liderança atua como um co-piloto para o gestor:
-- **Geração via IA:** Cria roteiros altamente contextualizados baseados na senioridade do liderado e no perfil do líder.
-- **Privacy by Design:** Emite Atas em PDF processadas inteiramente no navegador do líder, sem salvar dados sensíveis em banco de dados.
-- **Telemetria Anônima:** Gera logs de auditoria silenciados que informam ao RH *quem* fez a reunião e *quando*, mas nunca *o que* foi dito.
-- **Liga de Ouro (Gamificação):** Recompensa a disciplina com XP, transformando a burocracia de documentar reuniões em uma experiência engajadora e competitiva de forma saudável.
+**US02 - Foco em Tela Única (SPA)**
+> **Como** usuário do sistema, 
+> **Eu quero** realizar todo o fluxo (preencher dados, ler o roteiro, assinar e baixar) na mesma tela, 
+> **Para que** eu não perca o foco abrindo dezenas de abas durante ou antes da reunião.
 
-## 4. Métricas de Sucesso (KPIs)
-A validação do sucesso deste MVP será medida através dos seguintes indicadores:
-- **Taxa de Documentação:** Proporção entre roteiros gerados vs. Atas efetivamente baixadas (PDF).
-- **Taxa de Compartilhamento:** Volume de atas enviadas aos liderados ou ao RH.
-- **Engajamento da Liderança (MAU):** Número de líderes ativos que pontuaram na "Liga de Ouro" durante o ciclo (mês/quinzena).
-- **Relevância Percebida (Futuro):** Nota de utilidade (NPS) dada pelo liderado após a reunião.
+## Épico 2: Governança, LGPD e Compartilhamento
+**US03 - Geração de Ata Oficial (PDF)**
+> **Como** gestor responsável, 
+> **Eu quero** assinar e baixar a ata de alinhamento em PDF diretamente no meu navegador, 
+> **Para que** eu tenha um documento oficial do que foi acordado sem que a empresa armazene o conteúdo em servidores desprotegidos.
+
+**US04 - Envio Fácil ao Liderado e RH** *(Em desenvolvimento)*
+> **Como** líder, 
+> **Eu quero** um botão rápido para compartilhar o sumário ou o PDF diretamente com o liderado e com o RH em cópia, 
+> **Para que** eu garanta total transparência sobre a reunião e registre as informações para os ciclos de calibração de performance.
+
+## Épico 3: Gamificação e Engajamento
+**US05 - Recompensa por Disciplina (XP)**
+> **Como** líder competitivo, 
+> **Eu quero** receber pontos (XP) sempre que eu baixar oficialmente uma Ata de reunião, 
+> **Para que** eu suba no ranking da "Liga de Ouro" e meu esforço na gestão de pessoas seja reconhecido.
+
+**US06 - Missões e Frases Motivadoras** *(Em desenvolvimento)*
+> **Como** líder, 
+> **Eu quero** que a IA me sugira uma "Missão" clara e uma frase motivadora personalizada no final do roteiro, 
+> **Para que** eu consiga engajar meu liderado com um desafio prático até o nosso próximo alinhamento.
+
+## Épico 4: Telemetria e People Analytics
+**US07 - Auditoria Silenciosa (Logs)**
+> **Como** analista de RH (People Analytics), 
+> **Eu quero** que o sistema registre anonimamente os metadados das reuniões (perfil, data, confirmação de download) em um arquivo de log seguro, 
+> **Para que** eu consiga medir o engajamento geral da liderança sem ferir a privacidade do que foi conversado.
+
+**US08 - Avaliação de Utilidade (Feedback)** *(Em desenvolvimento)*
+> **Como** liderado, 
+> **Eu quero** receber uma pergunta rápida após a reunião para avaliar se o alinhamento foi útil, 
+> **Para que** o RH saiba se a qualidade da liderança está realmente melhorando.

@@ -1,329 +1,386 @@
 // src/views/Home.jsx
-
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { 
+  Bot, Send, FileText, Download, Loader2, 
+  User, CheckCircle2, AlertCircle, Briefcase, Clock, Eye, EyeOff
+} from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import html2pdf from 'html2pdf.js';
-import { 
-  FileText, 
-  ChevronDown, 
-  Loader2, 
-  RefreshCw, 
-  Rocket, 
-  Star, 
-  CheckCircle2, 
-  Download 
-} from 'lucide-react';
-import { LEADERS, MENTEES } from '../dados'; // 👈 Bebendo da mesma caixa d'água!
+import { DB_SQUADS } from '../dados';
 
-  export default function Home() {
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isGenerated, setIsGenerated] = useState(false);
-  const [showToast, setShowToast] = useState(false);
-  const [roteiroDoGemini, setRoteiroDoGemini] = useState("");
-  const [parametrosIniciais, setParametrosIniciais] = useState(null);
+export default function Home() {
+  const idLiderLogado = "daniel_nascimento";
+  const nomeLiderLogado = "DANIEL NASCIMENTO DOS SANTOS FILHO";
+  
+  const meuSquad = DB_SQUADS[idLiderLogado] || [];
 
- const handleGenerate = async (e) => {
+  const [lideradoSelecionado, setLideradoSelecionado] = useState(null);
+  const [senioridade, setSenioridade] = useState('');
+  const [tempoCasa, setTempoCasa] = useState('');
+  
+  const [perfilLider, setPerfilLider] = useState('');
+  const [perfilLiderado, setPerfilLiderado] = useState('');
+  const [entregas, setEntregas] = useState('');
+  
+  const [loading, setLoading] = useState(false);
+  const [resultado, setResultado] = useState('');
+  const [erro, setErro] = useState('');
+  const [toast, setToast] = useState({ visivel: false, mensagem: '' });
+  
+  // Controle das abas do documento (Confidencial vs RH)
+  const [abaDocumento, setAbaDocumento] = useState('roteiro');
+
+  const mostrarToast = (mensagem) => {
+    setToast({ visivel: true, mensagem });
+    setTimeout(() => {
+      setToast({ visivel: false, mensagem: '' });
+    }, 4000);
+  };
+
+  const handleLideradoChange = (e) => {
+    const id = e.target.value;
+    if (!id) {
+      setLideradoSelecionado(null);
+      setSenioridade('');
+      setTempoCasa('');
+      return;
+    }
+    const liderado = meuSquad.find(m => m.id.toString() === id);
+    setLideradoSelecionado(liderado);
+    setSenioridade(liderado.senioridade);
+    setTempoCasa(liderado.tempoCasa);
+  };
+
+  const handleGerar = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setErro('');
+    setResultado('');
 
-    if (isGenerated) {
-      setIsGenerated(false);
-      setRoteiroDoGemini("");
-      setParametrosIniciais(null); // Limpa ao resetar
-      e.target.reset();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (!lideradoSelecionado) {
+      setErro('Por favor, selecione um liderado do seu Squad.');
+      setLoading(false);
       return;
     }
-
-    const formData = new FormData(e.target);
-    const dadosFormulario = Object.fromEntries(formData.entries());
-
-    if (!dadosFormulario.pauta || !dadosFormulario.pauta.trim()) {
-      alert("⚠️ A pauta não pode ficar vazia!");
-      return;
-    }
-
-    // Salva os dados para usarmos no download
-    setParametrosIniciais(dadosFormulario);
-    setIsGenerating(true);
 
     try {
-      const response = await fetch("http://localhost:8000/api/gerar-roteiro", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dadosFormulario),
+      const response = await fetch('http://localhost:8000/api/gerar-roteiro', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          perfil_lideranca: perfilLider,
+          senioridade_liderado: senioridade,
+          tempo_casa: tempoCasa,
+          perfil_comportamental: perfilLiderado,
+          resumo_entregas: entregas
+        })
       });
 
-      if (!response.ok) throw new Error("Erro no servidor Python");
-
-      const data = await response.json();
+      if (!response.ok) throw new Error('Erro ao conectar com a inteligência artificial.');
       
-      setRoteiroDoGemini(data.roteiro_gerado);
-      setIsGenerated(true);
-
-    } catch (error) {
-      console.error(error);
-      alert("Houve um erro ao gerar o roteiro com a IA.");
+      const data = await response.json();
+      setResultado(data.roteiro);
+      setAbaDocumento('roteiro'); // Força a aba inicial
+    } catch (err) {
+      setErro(err.message || 'Erro inesperado ao gerar roteiro.');
     } finally {
-      setIsGenerating(false);
+      setLoading(false);
     }
   };
 
-  const handleDownload = () => {
-    const htmlLider = document.getElementById("lider-select");
-    const htmlLiderado = document.getElementById("liderado-select");
-
-    if (!htmlLider || !htmlLiderado) return;
-
-    const liderSelecionado = htmlLider.value;
-    const lideradoSelecionado = htmlLiderado.value;
-
-    if (!liderSelecionado || liderSelecionado === "") {
-      alert("⚠️ Por favor, assine a ata escolhendo seu nome em 'Líder Responsável'!");
-      return;
-    }
-    if (!lideradoSelecionado || lideradoSelecionado === "") {
-      alert("⚠️ Por favor, escolha o nome do 'Liderado(a)'!");
+  const handleDownloadPDF = async () => {
+    if (!lideradoSelecionado) {
+      mostrarToast("Erro de segurança: Liderado não identificado.");
       return;
     }
 
-    const elementoParaPDF = document.getElementById("conteudo-ata");
-    const opcoesPDF = {
-      margin:       15,
-      filename:     `Ata_ClearIT_${liderSelecionado.replace(/\s+/g, '_')}.pdf`,
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, useCORS: true },
-      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    // Pega SOMENTE a div da Ata Oficial
+    const elemento = document.getElementById('conteudo-ata');
+    const opt = {
+      margin: 15,
+      filename: `Ata_1a1_${lideradoSelecionado.nome.replace(' ', '_')}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    html2pdf().set(opcoesPDF).from(elementoParaPDF).save().then(() => {
-      
-      // 🚀 Dispara UMA única vez para o Back-end montando o Log perfeito
-      if (parametrosIniciais) {
-        fetch("http://localhost:8000/api/registrar-download", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            lider_nome: liderSelecionado,
-            perfil_lider: parametrosIniciais.perfil_lider,
-            senioridade: parametrosIniciais.senioridade,
-            tempo_empresa: parametrosIniciais.tempo_empresa,
-            perfil_comportamental: parametrosIniciais.perfil_comportamental
-          })
-        }).catch(err => console.error("Erro ao gravar log:", err));
-      }
+    // Gera o PDF
+    html2pdf().set(opt).from(elemento).save();
 
-      const rankingAtual = JSON.parse(localStorage.getItem("@clearit-ranking")) || {};
-      rankingAtual[liderSelecionado] = (rankingAtual[liderSelecionado] || 0) + 100;
-      localStorage.setItem("@clearit-ranking", JSON.stringify(rankingAtual));
+    // XP em primeiro lugar
+    const rankingSalvo = JSON.parse(localStorage.getItem('@clearit-ranking')) || {};
+    const xpAtual = rankingSalvo[idLiderLogado] || 0;
+    rankingSalvo[idLiderLogado] = xpAtual + 100;
+    localStorage.setItem('@clearit-ranking', JSON.stringify(rankingSalvo));
+    
+    const novaNotificacao = {
+      id: Date.now(),
+      titulo: 'Você ganhou +100 XP! ⚡',
+      mensagem: `Ata oficial gerada para ${lideradoSelecionado.nome}.`,
+      tempo: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      lida: false
+    };
+    
+    const notsSalvas = JSON.parse(localStorage.getItem('@clearit-notificacoes')) || [];
+    notsSalvas.unshift(novaNotificacao); // Coloca no começo da lista
+    localStorage.setItem('@clearit-notificacoes', JSON.stringify(notsSalvas));
+    
+    // Dispara o alarme pro App.jsx atualizar o sino na hora!
+    window.dispatchEvent(new Event('notificacao-atualizada'));
+    // 👆 --- FIM DA NOVA LÓGICA --- 👆
 
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 3000);
-    });
+    mostrarToast('✅ Ata baixada com sucesso e 100 XP creditados!');
+
+    try {
+      await fetch('http://localhost:8000/api/registrar-download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lider: nomeLiderLogado,
+          senioridade: senioridade,
+          perfil_comportamental: perfilLiderado
+        })
+      });
+    } catch (e) {
+      console.log('Aviso: Log de auditoria falhou, mas PDF gerado.', e);
+    }
   };
 
+  // --- O TRUQUE DE MESTRE: Separando a IA em duas partes ---
+  // A Regex pega a tag mesmo se a IA colocar "###" ou espaços na frente
+  const partesTexto = resultado.split(/--- ATA OFICIAL ---|- ATA OFICIAL -|ATA OFICIAL/);
+  const roteiroConfidencial = partesTexto.length > 1 ? partesTexto[0].trim() : 'Roteiro em processamento...';
+  const ataParaRH = partesTexto.length > 1 ? partesTexto[1].trim() : resultado;
+
   return (
-    <div className="max-w-3xl mx-auto space-y-10">
-      
-      {/* Hero Section */}
-      <div className="text-center space-y-4">
-        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-          Smart Leading <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Clear IT</span>
+    <div className="max-w-5xl mx-auto space-y-8 pb-10 animate-[fadeIn_0.4s_ease-out]">
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <Bot className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+          Gerador de Roteiro Inteligente
         </h1>
-        <p className="text-lg text-slate-600 dark:text-slate-400 max-w-xl mx-auto">
-          Seu assistente inteligente para estruturar reuniões 1:1 de alto impacto e gerar atas automáticas adequadas à LGPD.
+        <p className="text-slate-600 dark:text-slate-400 mt-1">
+          Prepare pautas altamente personalizadas utilizando inteligência artificial.
         </p>
       </div>
 
-      {/* Form Card */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-        <div className="p-6 md:p-8 space-y-6">
-          <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-4 mb-2">
-            <FileText className="w-5 h-5 text-blue-600" />
-            <h2 className="text-xl font-semibold">Parâmetros da 1:1</h2>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+        
+        {/* === LADO ESQUERDO: CONTROLES === */}
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-4 flex items-center gap-2">
+              <User className="w-4 h-4" /> Autenticação e Vínculo
+            </h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Líder Responsável</label>
+                <div className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-600 dark:text-slate-400 font-semibold flex items-center gap-2 cursor-not-allowed">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  {nomeLiderLogado}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Selecione o Liderado</label>
+                <select 
+                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white"
+                  onChange={handleLideradoChange}
+                  value={lideradoSelecionado ? lideradoSelecionado.id : ''}
+                  required
+                >
+                  <option value="">Selecione um membro do seu Squad...</option>
+                  {meuSquad.map(m => (
+                    <option key={m.id} value={m.id}>{m.nome} - {m.cargo}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </div>
-          
-          <form onSubmit={handleGenerate} className="space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Perfil de Liderança</label>
-                <div className="relative">
-                  <select name="perfil_lider" disabled={isGenerating} className="w-full appearance-none bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg px-4 py-3 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:opacity-60 disabled:cursor-not-allowed">
-                    <option>Líder Técnico</option>
-                    <option>Líder Inspiracional</option>
-                    <option>Líder em Transição (Novo)</option>
-                    <option>Líder Facilitador</option>
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+
+          <form onSubmit={handleGerar} className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 space-y-4">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-4 flex items-center gap-2">
+              <Bot className="w-4 h-4" /> Parâmetros da Reunião
+            </h2>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Senioridade</label>
+                <div className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                  <Briefcase className="w-4 h-4 text-slate-400" />
+                  {senioridade || 'Aguardando...'}
                 </div>
               </div>
-
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Senioridade do Liderado</label>
-                <div className="relative">
-                  <select name="senioridade" disabled={isGenerating} className="w-full appearance-none bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg px-4 py-3 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:opacity-60 disabled:cursor-not-allowed">
-                    <option>Estagiário / Aprendiz</option>
-                    <option>Júnior</option>
-                    <option>Pleno</option>
-                    <option>Sênior / Especialista</option>
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Tempo de Empresa</label>
-                <div className="relative">
-                  <select name="tempo_empresa" disabled={isGenerating} className="w-full appearance-none bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg px-4 py-3 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:opacity-60 disabled:cursor-not-allowed">
-                    <option>Menos de 6 meses (Onboarding)</option>
-                    <option>6 meses a 1 ano</option>
-                    <option>1 a 3 anos</option>
-                    <option>Mais de 3 anos</option>
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Perfil Comportamental</label>
-                <div className="relative">
-                  <select name="perfil_comportamental" disabled={isGenerating} className="w-full appearance-none bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg px-4 py-3 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:opacity-60 disabled:cursor-not-allowed">
-                    <option>Analítico / Detalhista</option>
-                    <option>Comunicador / Extrovertido</option>
-                    <option>Executor / Prático</option>
-                    <option>Planejador / Metódico</option>
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              <div>
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Tempo de Casa</label>
+                <div className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-slate-400" />
+                  {tempoCasa || 'Aguardando...'}
                 </div>
               </div>
             </div>
 
-            <div className="space-y-1 pt-2">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Resumo das últimas entregas / Pauta <span className="text-red-500">*</span></label>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Seu Perfil (Líder)</label>
+                <select className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm outline-none text-slate-900 dark:text-white" value={perfilLider} onChange={e => setPerfilLider(e.target.value)} required>
+                  <option value="">Selecione...</option>
+                  <option value="Técnico">Técnico</option>
+                  <option value="Transição">Em Transição</option>
+                  <option value="Engajado">Engajado</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Momento do Liderado</label>
+                <select className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm outline-none text-slate-900 dark:text-white" value={perfilLiderado} onChange={e => setPerfilLiderado(e.target.value)} required>
+                  <option value="">Selecione...</option>
+                  <option value="Motivado e entregando acima do esperado">Alta Performance</option>
+                  <option value="Consistente, mas precisa de novos desafios">Zona de Conforto</option>
+                  <option value="Abaixo do esperado ou desmotivado">Abaixo do Esperado</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Foco / Entregas Recentes</label>
               <textarea 
-                name="pauta"
+                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm outline-none text-slate-900 dark:text-white resize-none"
+                rows="3"
+                placeholder="Ex: Entregou o projeto X com atraso."
+                value={entregas}
+                onChange={e => setEntregas(e.target.value)}
                 required
-                disabled={isGenerating}
-                rows={3} 
-                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none disabled:opacity-60 disabled:cursor-not-allowed"
-                placeholder="Ex: Entregou a API de pagamentos com 2 dias de antecedência. Precisamos falar sobre o novo épico..."
-              ></textarea>
+              />
             </div>
-
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Acordos prévios (Opcional)</label>
-              <textarea 
-                name="acordos"
-                disabled={isGenerating}
-                rows={2} 
-                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none disabled:opacity-60 disabled:cursor-not-allowed"
-                placeholder="Ex: Focar em testes unitários neste sprint."
-              ></textarea>
-            </div>
-
-            <div className="pt-4">
-              <button 
-                type="submit" 
-                disabled={isGenerating}
-                className={`w-full font-semibold py-4 px-6 rounded-xl shadow-md transition-all active:scale-[0.98] flex justify-center items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed ${
-                  isGenerated 
-                    ? 'bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white shadow-slate-900/20' 
-                    : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20' 
-                }`}
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Processando com IA...
-                  </>
-                ) : isGenerated ? (
-                  <>
-                    <RefreshCw className="w-5 h-5" />
-                    Gerar Novo Roteiro
-                  </>
-                ) : (
-                  <>
-                    <Rocket className="w-5 h-5" />
-                    Gerar Roteiro Personalizado
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-
-      {/* Resultados Gerados */}
-      {isGenerated && (
-        <div className="animate-[fadeIn_0.5s_ease-out] space-y-6">
-          
-          {/* Roteiro da IA */}
-          <div id="conteudo-ata" className="bg-slate-900 dark:bg-slate-950 text-slate-100 rounded-2xl p-6 md:p-8 shadow-lg border border-slate-800">
-            <h3 className="text-lg font-semibold text-blue-400 mb-4 flex items-center gap-2">
-              <Star className="w-5 h-5" />
-              Sugestão de Roteiro (Smart AI)
-            </h3>
-            <div className="prose prose-invert prose-blue max-w-none text-slate-300">
-              <ReactMarkdown>
-                {roteiroDoGemini}
-              </ReactMarkdown>
-            </div>
-          </div>
-
-          {/* Registro Oficial / LGPD */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 md:p-8 shadow-sm border border-emerald-100 dark:border-slate-700 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-bl-full -mr-4 -mt-4"></div>
-            
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
-              <CheckCircle2 className="w-6 h-6 text-emerald-500" />
-              Registro Oficial (Ata LGPD)
-            </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
-              
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Líder Responsável <span className="text-red-500">*</span></label>
-                <select id="lider-select" defaultValue="" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 transition-all font-medium">
-                  <option value="" disabled>Selecione seu nome...</option>
-                  {LEADERS.filter(nome => !nome.toLowerCase().includes("selecione")).map((l, i) => <option key={i} value={l}>{l}</option>)}
-                </select>
-              </div>
-              
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Liderado(a) <span className="text-red-500">*</span></label>
-                <select id="liderado-select" defaultValue="" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 transition-all">
-                  <option value="" disabled>Selecione o liderado...</option>
-                  {MENTEES.filter(nome => !nome.toLowerCase().includes("selecione")).map((m, i) => <option key={i} value={m}>{m}</option>)}
-                </select>
-              </div>
-
-            </div>
-
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-100 dark:border-slate-800">
-              <span className="font-semibold text-slate-700 dark:text-slate-300">Nota de Privacidade:</span> Os dados gerados nesta ata são anonimizados e não retêm PII sensíveis, estando em total conformidade com as diretrizes de LGPD corporativas da Clear IT.
-            </p>
 
             <button 
-              onClick={handleDownload}
-              className="w-full sm:w-auto px-6 py-3 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 font-semibold rounded-xl transition-colors flex justify-center items-center gap-2 border border-emerald-200 dark:border-emerald-500/30"
+              type="submit" 
+              disabled={loading || !lideradoSelecionado}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50 mt-2 shadow-sm shadow-blue-600/20"
             >
-              <Download className="w-5 h-5" />
-              Baixar Ata Oficial em PDF
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+              {loading ? 'Processando com IA...' : 'Gerar Roteiro Estratégico'}
+            </button>
+            {erro && <p className="text-red-500 text-sm mt-2 flex items-center gap-1"><AlertCircle className="w-4 h-4"/>{erro}</p>}
+          </form>
+        </div>
+
+        {/* === LADO DIREITO: RESULTADO (ABAS) === */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col min-h-[600px] overflow-hidden">
+          
+          {/* Header com as Abas */}
+          <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50">
+            <button 
+              disabled={!resultado}
+              onClick={() => setAbaDocumento('roteiro')}
+              className={`flex-1 py-4 text-sm font-bold flex items-center justify-center gap-2 transition-colors ${abaDocumento === 'roteiro' ? 'text-blue-600 border-b-2 border-blue-600 bg-white dark:bg-slate-900' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 disabled:opacity-50'}`}
+            >
+              <EyeOff className="w-4 h-4" /> Roteiro Confidencial
+            </button>
+            <button 
+              disabled={!resultado}
+              onClick={() => setAbaDocumento('ata')}
+              className={`flex-1 py-4 text-sm font-bold flex items-center justify-center gap-2 transition-colors ${abaDocumento === 'ata' ? 'text-emerald-600 border-b-2 border-emerald-600 bg-white dark:bg-slate-900' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 disabled:opacity-50'}`}
+            >
+              <FileText className="w-4 h-4" /> Ata Oficial (RH)
             </button>
           </div>
-        </div>
-      )}
 
-      {/* Toast Notification */}
-      <div className={`fixed bottom-20 md:bottom-10 right-6 md:right-10 z-50 transition-all duration-300 transform ${showToast ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0 pointer-events-none'}`}>
-        <div className="bg-emerald-500 text-white px-6 py-4 rounded-xl shadow-lg shadow-emerald-500/20 flex items-center gap-3">
-          <CheckCircle2 className="w-6 h-6" />
-          <div>
-            <p className="font-semibold">Ata baixada com sucesso!</p>
-            <p className="text-emerald-100 text-sm">+100 XP no Ranking da Liga!</p>
+          <div className="flex-1 p-6 relative">
+            {!resultado && !loading && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 opacity-50">
+                <Bot className="w-16 h-16 mb-4" />
+                <p>Preencha os dados e gere o roteiro.</p>
+              </div>
+            )}
+            
+            {loading && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-blue-500">
+                <Loader2 className="w-10 h-10 animate-spin mb-4" />
+                <p className="animate-pulse font-medium">A IA está analisando o perfil...</p>
+              </div>
+            )}
+
+            {/* CONTEÚDO 1: ROTEIRO CONFIDENCIAL */}
+            {resultado && abaDocumento === 'roteiro' && (
+              <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none animate-[fadeIn_0.3s]">
+                <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-800 dark:text-blue-300 p-4 rounded-xl mb-6 flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm m-0"><strong>Atenção Líder:</strong> Este roteiro contém dicas de mentoria baseadas no seu perfil e no momento do seu liderado. Ele <strong>não</strong> aparecerá no PDF final do RH.</p>
+                </div>
+                <ReactMarkdown>{roteiroConfidencial}</ReactMarkdown>
+              </div>
+            )}
+
+            {/* CONTEÚDO 2: ATA OFICIAL (ÁREA DE IMPRESSÃO) */}
+            <div className={`${abaDocumento === 'ata' && resultado ? 'block animate-[fadeIn_0.3s]' : 'hidden'}`}>
+              
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-slate-900 dark:text-white font-bold">Documento Pronto para Assinatura</h3>
+                <button onClick={handleDownloadPDF} className="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold shadow-sm transition-all">
+                  <Download className="w-4 h-4" /> Gerar PDF
+                </button>
+              </div>
+
+              {/* MÁGICA DO PDF: Fundo branco e texto preto FORÇADO para impressão perfeita */}
+              <div 
+                id="conteudo-ata" 
+                className="bg-white text-slate-900 p-6 md:p-8 rounded-xl border border-slate-200 shadow-sm"
+              >
+                {/* Cabeçalho Bonito */}
+                <div className="mb-8 border-b-2 border-slate-200 pb-6">
+                  <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-4">Ata Oficial de Alinhamento 1:1</h2>
+                  <div className="grid grid-cols-2 gap-y-4 gap-x-8 text-sm">
+                    <div>
+                      <span className="text-slate-500 text-xs font-bold uppercase block mb-1">Líder Conduzindo</span>
+                      <span className="font-semibold text-slate-900">{nomeLiderLogado}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 text-xs font-bold uppercase block mb-1">Colaborador</span>
+                      <span className="font-semibold text-slate-900">{lideradoSelecionado?.nome}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 text-xs font-bold uppercase block mb-1">Cargo e Nível</span>
+                      <span className="font-semibold text-slate-900">{lideradoSelecionado?.cargo} ({senioridade})</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 text-xs font-bold uppercase block mb-1">Tempo de Empresa</span>
+                      <span className="font-semibold text-slate-900">{tempoCasa}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* O Markdown renderizado sem influências do Dark Mode */}
+                <div className="prose prose-sm max-w-none prose-slate text-slate-800">
+                  <ReactMarkdown>{ataParaRH}</ReactMarkdown>
+                </div>
+                
+                {/* Rodapé de Assinaturas */}
+                <div className="mt-16 pt-8 grid grid-cols-2 gap-8 text-center">
+                  <div>
+                    <div className="border-b border-slate-400 w-3/4 mx-auto mb-2"></div>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Assinatura do Líder</p>
+                  </div>
+                  <div>
+                    <div className="border-b border-slate-400 w-3/4 mx-auto mb-2"></div>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Assinatura do Liderado</p>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
           </div>
         </div>
       </div>
+
+      {toast.visivel && (
+        <div className="fixed bottom-8 right-8 z-50 flex items-center gap-3 bg-emerald-500 text-white px-6 py-4 rounded-xl shadow-2xl shadow-emerald-500/30 animate-[fadeIn_0.3s_ease-out]">
+          <CheckCircle2 className="w-6 h-6 flex-shrink-0" />
+          <span className="font-semibold">{toast.mensagem}</span>
+        </div>
+      )}
     </div>
   );
 }

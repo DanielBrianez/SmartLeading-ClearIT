@@ -8,7 +8,7 @@ Além de gerar pautas estruturadas, o sistema emite atas automatizadas em PDF, 1
 
 ## ✨ Principais Funcionalidades
 
-- **🧠 Roteiros com IA:** Geração de pautas via API do Gemini 1.5 Flash baseada em parâmetros comportamentais e técnicos.
+- **🧠 Roteiros com IA:** Geração de pautas via API do Gemini 3.1 Flash Lite baseada em parâmetros comportamentais e técnicos.
 - **📄 Atas em PDF (LGPD):** Geração de documentos PDF no lado do cliente com assinatura digital dos envolvidos.
 - **🏆 Gamificação:** Sistema de XP e ranking local ("Liga de Ouro") com patentes como *Titã das 1:1s* e *Líder de Impacto*.
 - **📊 Auditoria e Logs:** Geração de logs automáticos em `.csv` no Back-end a cada ata baixada para consumo em ferramentas de BI.

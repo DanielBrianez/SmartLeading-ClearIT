@@ -1,106 +1,89 @@
-import { useState, useEffect } from 'react';
-import { Trophy, Award } from 'lucide-react';
-import { LEADERS } from '../dados';
+// src/views/Ranking.jsx
+import React, { useState, useEffect } from 'react';
+import { Trophy, Medal, Award, Zap } from 'lucide-react';
+import minhaFoto from '../assets/daniel-foto.jpg'; // Sua foto oficial
 
 export default function Ranking() {
-  const [rankingData, setRankingData] = useState([]);
+  const [lideres, setLideres] = useState([]);
 
   useEffect(() => {
-    const xpSalvo = JSON.parse(localStorage.getItem("@clearit-ranking")) || {};
+    // 1. Abre o cofre do navegador e pega o XP que você ganhou
+    const rankingSalvo = JSON.parse(localStorage.getItem('@clearit-ranking')) || {};
+    
+    // 2. Os competidores da Liga de Ouro
+    const baseCompetidores = [
+      { id: 'daniel_nascimento', nome: 'Daniel Nascimento', cargo: 'Tech Lead', foto: minhaFoto, xpBase: 0 },
+      { id: 'juliana_castro', nome: 'Juliana Castro', cargo: 'Agile Coach', foto: null, xpBase: 200 },
+      { id: 'marcos_vinicius', nome: 'Marcos Vinícius', cargo: 'Coord. de TI', foto: null, xpBase: 100 }
+    ];
 
-    const dadosProcessados = LEADERS
-      .filter(nome => !nome.toLowerCase().includes("selecione"))
-      .map(nome => ({
-        nome: nome,
-        xp: xpSalvo[nome] || 0,
-      }));
+    // 3. Junta os pontos! (O seu XP Base + O que você ganhou gerando atas)
+    const rankingCalculado = baseCompetidores.map(lider => {
+      const xpGanhoNoNavegador = rankingSalvo[lider.id] || 0;
+      return {
+        ...lider,
+        xpTotal: lider.xpBase + xpGanhoNoNavegador
+      };
+    });
 
-    dadosProcessados.sort((a, b) => b.xp - a.xp);
-    setRankingData(dadosProcessados);
+    // 4. Ordena do Maior para o Menor
+    rankingCalculado.sort((a, b) => b.xpTotal - a.xpTotal);
+    setLideres(rankingCalculado);
   }, []);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-[fadeIn_0.5s_ease-out]">
-      
-      {/* Cabeçalho do Ranking */}
-      <div className="text-center space-y-4">
-        <div className="inline-flex items-center justify-center p-3 bg-amber-100 dark:bg-amber-500/10 rounded-2xl mb-2">
+    <div className="max-w-4xl mx-auto animate-[fadeIn_0.4s_ease-out]">
+      <div className="text-center mb-10">
+        <div className="inline-flex items-center justify-center p-4 bg-amber-100 dark:bg-amber-500/10 rounded-full mb-4">
           <Trophy className="w-10 h-10 text-amber-500" />
         </div>
-        <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white">
-          Liga de Ouro - Liderança
-        </h2>
-        <p className="text-slate-600 dark:text-slate-400">
-          Gere atas oficiais para ganhar <span className="font-bold text-amber-500">100 XP</span> e subir no ranking.
+        <h2 className="text-3xl font-bold text-slate-900 dark:text-white">Liga de Ouro</h2>
+        <p className="text-slate-600 dark:text-slate-400 mt-2">
+          Os líderes mais engajados no desenvolvimento contínuo de suas equipes.
         </p>
       </div>
 
-      {/* Tabela (Card) */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-        <div className="p-0 sm:p-2">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-slate-100 dark:border-slate-700">
-                <th className="py-4 px-6 font-semibold text-slate-500 dark:text-slate-400">Posição</th>
-                <th className="py-4 px-6 font-semibold text-slate-500 dark:text-slate-400">Líder</th>
-                <th className="py-4 px-6 font-semibold text-slate-500 dark:text-slate-400 text-right">XP Total</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-              {rankingData.map((lider, index) => {
-                // Lógica visual para o Top 3
-                const isTop1 = index === 0 && lider.xp > 0;
-                const isTop2 = index === 1 && lider.xp > 0;
-                const isTop3 = index === 2 && lider.xp > 0;
+      <div className="space-y-4">
+        {lideres.map((lider, index) => (
+          <div key={lider.id} className="flex items-center justify-between bg-white dark:bg-slate-900 p-4 lg:p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-transform hover:scale-[1.01]">
+            
+            <div className="flex items-center gap-4 lg:gap-6">
+              {/* Posição no Ranking */}
+              <div className="w-10 text-center font-bold text-2xl text-slate-400 dark:text-slate-500">
+                #{index + 1}
+              </div>
+              
+              {/* Foto do Perfil */}
+              <div className="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden border-2 border-slate-200 dark:border-slate-700">
+                {lider.foto ? (
+                  <img src={lider.foto} alt={lider.nome} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-xl font-bold text-slate-400">{lider.nome.charAt(0)}</span>
+                )}
+              </div>
 
-                // Títulos customizados
-                let titulo = "";
-                if (isTop1) titulo = "👑 Titã das 1:1s";
-                else if (isTop2) titulo = "🚀 Líder de Impacto";
-                else if (isTop3) titulo = "⭐ Gestor Engajado";
+              {/* Informações */}
+              <div>
+                <h3 className="font-bold text-slate-900 dark:text-white text-lg flex items-center gap-2">
+                  {lider.nome}
+                  {index === 0 && <Medal className="w-5 h-5 text-amber-500" title="Titã das 1:1s" />}
+                  {index === 1 && <Medal className="w-5 h-5 text-slate-400" title="Líder de Impacto" />}
+                  {index === 2 && <Medal className="w-5 h-5 text-amber-700" title="Gestor Engajado" />}
+                </h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{lider.cargo}</p>
+              </div>
+            </div>
 
-                return (
-                  <tr 
-                    key={index} 
-                    className={`transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/30 ${isTop1 ? 'bg-amber-50/50 dark:bg-amber-500/5' : ''}`}
-                  >
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-3">
-                        {isTop1 ? <Award className="w-6 h-6 text-amber-500" /> :
-                         isTop2 ? <Award className="w-6 h-6 text-slate-400" /> :
-                         isTop3 ? <Award className="w-6 h-6 text-amber-700" /> :
-                         <span className="text-slate-400 dark:text-slate-500 font-medium w-6 text-center">{index + 1}º</span>}
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="flex flex-col">
-                        <span className={`font-medium ${isTop1 ? 'text-amber-600 dark:text-amber-400 font-bold text-lg' : 'text-slate-700 dark:text-slate-300'}`}>
-                          {lider.nome}
-                        </span>
-                        {titulo && (
-                          <span className={`text-xs font-semibold mt-0.5 ${
-                            isTop1 ? 'text-amber-500' :
-                            isTop2 ? 'text-slate-500 dark:text-slate-400' :
-                            'text-amber-700/70 dark:text-amber-600/70'
-                          }`}>
-                            {titulo}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-4 px-6 text-right">
-                      <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-semibold ${
-                        isTop1 ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' : 'bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300'
-                      }`}>
-                        {lider.xp} <span className="text-xs opacity-70">XP</span>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+            {/* O Famoso XP */}
+            <div className="text-right">
+              <div className="flex items-center gap-1.5 justify-end text-blue-600 dark:text-blue-400 font-bold text-xl">
+                <Zap className="w-5 h-5" />
+                {lider.xpTotal} <span className="text-sm font-medium text-slate-500 dark:text-slate-400">XP</span>
+              </div>
+            </div>
+
+          </div>
+        ))}
       </div>
     </div>
   );
