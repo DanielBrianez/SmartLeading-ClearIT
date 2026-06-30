@@ -1,56 +1,59 @@
-# Análise de Gaps: Especificação Ideal (Onion) vs. Implementação Atual (ClearIT) 🔍
+# Análise de Gaps: Especificação de Negócio vs. Implementação Real (React & FastAPI) 🔍
 
-Este documento mapeia as diferenças entre a especificação ideal do **Onion Portable** e a implementação real existente no código do **ClearIT** (`src/`). O objetivo é orientar o time de engenharia sobre o que precisa ser construído para alinhar o código com o escopo de produto planejado, sem realizar alterações de código neste momento.
+Este documento mapeia as divergências entre a especificação ideal do **Onion Portable (Business Context)** e a implementação real no código atual da aplicação (**React + Vite no frontend e FastAPI no backend**). 
 
 ---
 
-## 🗺️ 1. Mapeamento Geral por Feature
+## 🗺️ 1. Correção de Estrutura: Mapeamento de Arquivos
+A análise anterior referenciava arquivos de uma aplicação Streamlit em Python (ex: `src/app.py`, `src/components/ui_forms.py`). A estrutura real do projeto está dividida entre `frontend/` e `backend/`:
+
+| Referência Incorreta (Streamlit) | Caminho Real na Aplicação Atual | Componente / Função |
+| :--- | :--- | :--- |
+| `src/app.py` | [App.jsx](file:///c:/Users/Pulse%20Mais/24+1/SmartLeading-ClearIT/frontend/src/App.jsx) e views associadas | Interface do Usuário (SPA) e Roteamento de Abas |
+| `src/components/ui_forms.py` | [Home.jsx](file:///c:/Users/Pulse%20Mais/24+1/SmartLeading-ClearIT/frontend/src/views/Home.jsx) / [MeuSquad.jsx](file:///c:/Users/Pulse%20Mais/24+1/SmartLeading-ClearIT/frontend/src/views/MeuSquad.jsx) | Formulários de entrada, acordos, PDI e pauta da 1:1 |
+| `src/services/ai_agent.py` | [gemini.py](file:///c:/Users/Pulse%20Mais/24+1/SmartLeading-ClearIT/backend/app/core/gemini.py) | Engine de prompts e inferência do Gemini |
+| `src/services/pdf_maker.py` | Import do `html2pdf.js` no cliente frontend | Geração e download do PDF da Ata de 1:1 |
+| `src/utils/logger.py` | Rota `/api/registrar-download` em [main.py](file:///c:/Users/Pulse%20Mais/24+1/SmartLeading-ClearIT/backend/app/main.py) | Registro local de telemetria em formato CSV |
+
+---
+
+## 🔍 2. Gaps por Feature (Especificação vs. Código)
 
 ### F-01: Gerar Roteiro Inteligente de 1:1
-*   **O Ideal (Onion Spec):** O roteiro considera histórico, combinados passados, sentimento e o nível do liderado no Framework de Levels.
-*   **O Implementado (Código Atual):** A IA gera o roteiro com base em parâmetros inseridos manualmente pelo líder na hora da reunião. Não há persistência ou leitura automática de históricos passados ou níveis de competência no banco.
-*   **Gaps no Código:**
-    - Integrar carregamento de dados do colaborador e histórico de ritos anteriores no [ui_forms.py](file:///c:/Users/Pulse%20Mais/24+1/ClearIT/src/components/ui_forms.py) e no [ai_agent.py](file:///c:/Users/Pulse%20Mais/24+1/ClearIT/src/services/ai_agent.py).
-    - Mapear as competências de cada nível de senioridade do Framework de Levels diretamente no prompt da IA.
+*   **Especificação Ideal:** O roteiro considera o histórico, os combinados passados, sentimento e o nível do liderado no **Framework de Levels**. O prompt é seguro e no-PII (Privacy by Design).
+*   **Código Atual:** 
+    *   **Ausência de Histórico de Atas/Tarefas:** A rota `/api/gerar-roteiro` recebe apenas `perfil_lideranca`, `senioridade_liderado`, `tempo_casa`, `perfil_comportamental` e `resumo_entregas`. Os dados de tarefas passadas ou atas anteriores (que existem em `localStorage` e em [dados.js](file:///c:/Users/Pulse%20Mais/24+1/SmartLeading-ClearIT/frontend/src/dados.js)) não são transmitidos nem considerados na geração do roteiro.
+    *   **Falta do Framework de Levels:** O prompt da IA em [gemini.py](file:///c:/Users/Pulse%20Mais/24+1/SmartLeading-ClearIT/backend/app/core/gemini.py) não possui conhecimento sobre a matriz de habilidades da Clear IT. Ele gera um roteiro comportamental genérico baseado apenas em senioridade abstrata (ex: Pleno, Sênior).
+    *   **Versão do Modelo Gemini:** O backend utiliza o modelo `gemini-3.1-flash-lite`, enquanto a especificação técnica prevê `gemini-1.5-flash` ou `gemini-2.5-flash`.
 
 ### F-02: Exportar Ata da Reunião em PDF
-*   **O Ideal (Onion Spec):** O PDF consolida check-in, pauta, entregas, impedimentos, PDI e plano de ação. Possui gatilho de compartilhamento rápido com o liderado pós-download e envia cópia ao RH.
-*   **O Implementado (Código Atual):** O PDF é gerado localmente pelo [pdf_maker.py](file:///c:/Users/Pulse%20Mais/24+1/ClearIT/src/services/pdf_maker.py) e faz o download. A telemetria registra apenas a flag local se o arquivo foi baixado.
-*   **Gaps no Código:**
-    - Falta implementar o gatilho visual no [app.py](file:///c:/Users/Pulse%20Mais/24+1/ClearIT/src/app.py) para o líder enviar a ata diretamente ao e-mail ou Slack do colaborador.
-    - Falta implementar a cópia automática por e-mail para a área de calibração de performance do RH.
+*   **Especificação Ideal:** PDF gerado no cliente por `html2pdf.js` sem trafegar dados pessoais para o servidor. Deve haver um **gatilho rápido** no front-end para compartilhar a ata com o liderado e enviar cópia ao RH.
+*   **Código Atual:**
+    *   **Sem Compartilhamento Rápido:** A função `handleDownloadPDF` em [Home.jsx](file:///c:/Users/Pulse%20Mais/24+1/SmartLeading-ClearIT/frontend/src/views/Home.jsx) baixa o PDF localmente, registra no log e no localStorage, mas não oferece opção ou gatilho visual para enviar o documento ao e-mail ou Slack do colaborador.
+    *   **Sem Envio para o RH:** Não há qualquer fluxo implementado para enviar uma cópia agregada ou ata oficial para o RH.
 
 ### F-03: Motor de Maturidade & Liga de Líderes
-*   **O Ideal (Onion Spec):** Avalia e classifica o líder em 4 níveis (Iniciante, Em desenvolvimento, Consistente, Referência) com base em 3 drivers operacionais: Frequência, Taxa de Documentação e Engajamento em PDI.
-*   **O Implementado (Código Atual):** O [app.py](file:///c:/Users/Pulse%20Mais/24+1/ClearIT/src/app.py) apenas soma `+1` no dicionário de ranking toda vez que o líder clica em baixar o PDF, sem aplicar nenhuma regra matemática ou lógica de níveis de maturidade.
-*   **Gaps no Código:**
-    - Implementar a função lógica que lê os registros de telemetria daquele líder e calcula a conformidade das 1:1s, a proporção de atas baixadas e a presença de PDIs ativos.
-    - Alterar a exibição da tela de Ranking para exibir a categoria do líder (Ex: "Daniel Nascimento — Nível: Consistente 🏆").
+*   **Especificação Ideal:** Classifica o líder em 4 níveis (Iniciante, Em desenvolvimento, Consistente, Referência) com base estrita nos 3 drivers operacionais: Frequência de Ritos, Taxa de Documentação e Engajamento em PDI.
+*   **Código Atual:**
+    *   **Cálculo Simplista por XP:** O arquivo [Ranking.jsx](file:///c:/Users/Pulse%20Mais/24+1/SmartLeading-ClearIT/frontend/src/views/Ranking.jsx) calcula a maturidade baseado estritamente na pontuação de `xpTotal` (Ganho de 100 XP por ata baixada + XP base). Não há avaliação matemática dos drivers de frequência ou engajamento de PDI.
+    *   **Divergência de Dados (Ranking Estático):** O ranking define competidores estáticos (`baseCompetidores`) que não correspondem à constante `LEADERBOARD` de [dados.js](file:///c:/Users/Pulse%20Mais/24+1/SmartLeading-ClearIT/frontend/src/dados.js). Além disso, o liderado "Carlos Eduardo" é listado incorretamente como um Líder no ranking.
+    *   **Sem Redirecionamento Automático:** O redirecionamento planejado do usuário para a tela "Meu Squad" ou "Meu Perfil" após o término e download da ata não está implementado em [Home.jsx](file:///c:/Users/Pulse%20Mais/24+1/SmartLeading-ClearIT/frontend/src/views/Home.jsx).
 
-### F-04: Dashboard de Métricas do RH
-*   **O Ideal (Onion Spec):** Painel executivo restrito ao RH mostrando adoção aggregate, conformidade e distribuição de maturidade sem expor os conteúdos privados das reuniões.
-*   **O Implementado (Código Atual):** Não existe no código. As abas atuais são apenas `Home`, `Ranking`, `Nosso Time` e `Sobre`.
-*   **Gaps no Código:**
-    - Criar uma nova aba/tela exclusiva no [app.py](file:///c:/Users/Pulse%20Mais/24+1/ClearIT/src/app.py) (ex: `tab_rh = st.tabs(...)` protegida por senha simples ou perfil de acesso).
-    - Desenvolver gráficos agregados lendo o arquivo [telemetry_logs.csv](file:///c:/Users/Pulse%20Mais/24+1/ClearIT/data/telemetry_logs.csv).
+### F-04: Dashboard de Métricas do RH (Painel do RH)
+*   **Especificação Ideal:** Painel executivo que exibe conformidade quinzenal, adoção e maturidade agregada através da leitura do arquivo de telemetria `telemetry_logs.csv` gerado no servidor.
+*   **Código Atual:**
+    *   **Interface 100% Mockada e Local:** O painel [PainelRH.jsx](file:///c:/Users/Pulse%20Mais/24+1/SmartLeading-ClearIT/frontend/src/views/PainelRH.jsx) é totalmente executado no lado do cliente. Ele não faz requisições HTTP para buscar as métricas consolidadas do backend.
+    *   **Gráficos Estáticos:** O histórico de eNPS, atas e PDIs usa um array estático (`historicoMeses`) que apenas soma os dados atuais do localStorage ao mês de Junho. Não há análise real do arquivo CSV de telemetria.
+
+### F-05: Setup de Banco, Autenticação e IA
+*   **Especificação Ideal:** Telemetria centralizada em `data/telemetry_logs.csv` com campos estruturados: Data/Hora, Perfil do Líder, Perfil Comportamental, Senioridade e flag de download.
+*   **Código Atual:**
+    *   **Incompatibilidade de Caminho de Log:** O backend grava o log em `backend/logs/smart_leading_logs.csv` (caminho local relativo `logs/smart_leading_logs.csv`) em vez do caminho padronizado `data/telemetry_logs.csv` esperado no escopo de conformidade de dados do projeto.
 
 ---
 
-## 🔎 2. Gaps por Arquivo de Código
+## 🎯 3. Resumo de Divergências nas Regras de Negócio
 
-### 1. [src/app.py](file:///c:/Users/Pulse%20Mais/24+1/ClearIT/src/app.py)
-*   **Falta de Abas Requeridas:** Ausência da aba de **Dashboard de RH** (Feature F-04) e da aba de treinamento **Guia do Líder** (Requisito D).
-*   **Mockups/Placeholders de Time:** A aba "Nosso Time" (`tab_time`) está com nomes de membros fictícios e imagens geradas genericamente de avatares.
-*   **Ordenação Simples do Ranking:** Falta de segmentação por área e lógica de maturidade.
-
-### 2. [src/components/ui_forms.py](file:///c:/Users/Pulse%20Mais/24+1/ClearIT/src/components/ui_forms.py)
-*   **Inputs Genéricos:** Os acordos e planos de desenvolvimento são coletados em uma caixa de texto livre. Não há o formulário estruturado para PDI (limite de 2 a 3 objetivos, suporte do gestor e marcos de 1, 2, 3 e 6 meses).
-
-### 3. [src/services/ai_agent.py](file:///c:/Users/Pulse%20Mais/24+1/ClearIT/src/services/ai_agent.py)
-*   **Instruções de Levels no Prompt:** O prompt atual do Gemini não possui conhecimento sobre a matriz de habilidades do **Framework de Levels** da ClearIT. Ele gera um roteiro comportamental geral, mas não técnico por competência.
-
-### 4. [src/services/pdf_maker.py](file:///c:/Users/Pulse%20Mais/24+1/ClearIT/src/services/pdf_maker.py)
-*   **Tratamento de String:** O script realiza limpeza de marcas brutas da IA, mas pode falhar se a estrutura de retorno do Gemini mudar a tag de divisão `--- ATA OFICIAL ---`. Precisa de um parser estruturado ou JSON Output.
-
-### 5. [src/utils/logger.py](file:///c:/Users/Pulse%20Mais/24+1/ClearIT/src/utils/logger.py)
-*   **Limitação de Metadados:** O logger registra apenas se a ata foi gerada e baixada localmente. Ele não captura eventos de compartilhamento ou se o PDI foi ativado, impedindo a computação correta dos drivers de maturidade.
+1.  **Formulário de PDI Genérico:** O formulário de PDI em [MeuSquad.jsx](file:///c:/Users/Pulse%20Mais/24+1/SmartLeading-ClearIT/frontend/src/views/MeuSquad.jsx) permite a inserção livre de Ações e Prazos sem impor o limite de 2 a 3 metas/objetivos ou a divisão estruturada por prazos (1, 2, 3 e 6 meses) especificados no Product Requirement Document (PRD).
+2.  **Guia do Líder Inexistente:** A aba/documento de apoio com diretrizes comportamentais e guia prático para treinamento das lideranças está ausente no código de navegação do frontend.
+3.  **Segurança e LGPD Localizada:** Embora a plataforma declare "LGPD Ativa", os dados salvos em `localStorage` não possuem criptografia simples ou isolamento, ficando expostos no console do browser do usuário.
