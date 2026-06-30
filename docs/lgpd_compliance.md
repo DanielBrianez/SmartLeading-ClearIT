@@ -1,39 +1,30 @@
-# 🛡️ Conformidade com a LGPD (Privacy by Design)
+# 🛡️ Governança e Conformidade LGPD (Privacy by Design)
 
-O **Smart Leading V2** foi arquitetado seguindo rigorosamente os princípios de *Privacy by Design* e *Privacy by Default*, garantindo o alinhamento com a **Lei Geral de Proteção de Dados (LGPD - Lei nº 13.709/2018)**.
+O **Smart Leading V2** foi arquitetado seguindo rigorosamente os princípios de *Privacy by Design* e *Privacy by Default*, garantindo o alinhamento total com a **Lei Geral de Proteção de Dados (LGPD - Lei nº 13.709/2018)**.
 
-O objetivo da ferramenta é fornecer suporte estrutural para a liderança, sem se tornar um repositório de dados sensíveis ou informações de cunho pessoal (PII - *Personally Identifiable Information*).
+O objetivo da ferramenta é fornecer suporte estrutural e analítico para a liderança, sem se tornar um repositório centralizado de dados sensíveis ou informações de cunho pessoal (PII - *Personally Identifiable Information*).
 
-## 1. Princípio da Minimização de Dados
-O sistema solicita apenas as informações estritamente necessárias para a inteligência artificial formular um roteiro adequado:
-- Perfil de Liderança do gestor.
-- Senioridade e tempo de empresa do liderado.
-- Perfil comportamental predominante.
-- Resumo da pauta (foco em desenvolvimento técnico e comportamental).
+## 1. Princípio da Minimização e Isolamento (Cofre Local)
+O sistema opera numa arquitetura de *Sandbox Client-Side*. Toda a persistência de dados sensíveis (Rascunhos de Atas, Planos de Desenvolvimento Individual - PDIs, e Histórico de Adiamentos) ocorre de forma criptografada no `localStorage` do navegador do próprio gestor. 
+- **Sem Banco de Dados Central:** O Back-end não possui tabelas de usuários, atas ou feedbacks em banco de dados relacional na nuvem.
+- **Isolamento de Repositório:** Configurações estritas de `.gitignore` garantem que nenhum arquivo de log (`*.csv`), documento (`*.pdf`) ou cache de memória transite para o versionamento do código-fonte (GitHub/GitLab).
 
-*Nenhum dado sensível (como informações de saúde, opiniões políticas ou filiações) é solicitado, processado ou armazenado pela plataforma.*
+## 2. Processamento Client-Side (Geração de PDFs)
+A compilação e geração do documento final (Ata Oficial de Alinhamento) é realizada **100% no cliente**, através do motor `html2pdf.js`. 
+- O arquivo contendo os detalhes discutidos é baixado localmente para a máquina do líder.
+- A aplicação não intercepta, não trafega e não retém cópias do arquivo PDF gerado.
 
-## 2. Processamento Client-Side (PDF)
-A geração do documento final (Ata da Reunião 1:1) é realizada de forma **100% Client-Side** (no navegador do usuário), através da biblioteca `html2pdf.js`. 
-- O arquivo PDF contendo os detalhes discutidos é baixado diretamente para a máquina local do gestor.
-- **O Back-end da aplicação não recebe, não intercepta e não armazena o arquivo PDF gerado.**
+## 3. Telemetria e People Analytics (Zero PII)
+O inovador Painel do RH (People Analytics) gera métricas avançadas (Volume de Ritos, eNPS Preditivo, Taxa de Adoção) **agregando dados anonimizados localmente**. 
 
-## 3. Anonimização e Retenção de Logs
-O sistema de auditoria (Back-end) registra o uso da ferramenta para fins de Business Intelligence e Gamificação (apuração de engajamento da liderança). 
+Para fins de auditoria e gamificação (Liga de Ouro), os logs de telemetria enviados ao Back-end registram **apenas metadados genéricos**:
+- **O que é registrado:** Timestamp, Nome do Líder (Agente), Senioridade/Comportamento do liderado selecionado e Confirmação de Evento (`Baixou_Ata = Sim`).
+- **O que é bloqueado na raiz:** O nome do Liderado, o detalhamento técnico da "Pauta/Entregas", os acordos firmados no PDI e o Roteiro Confidencial gerado pela IA.
 
-**O que é registrado no arquivo `logs/smart_leading_logs.csv`:**
-- Data e hora da geração (Timestamp).
-- Nome do Líder que utilizou a ferramenta.
-- Perfis genéricos selecionados (Senioridade, Comportamento, etc.).
-- Confirmação de download (`Baixou_Ata = Sim`).
+## 4. Blindagem do Motor Paramétrico (Google Gemini)
+O envio do contexto da reunião para a API do Google Gemini obedece a um *Prompt System* estrito (`AGENTS.md`), que atua como uma barreira lógica de privacidade. 
 
-**O que NÃO é registrado (Descarte imediato):**
-- O nome do Liderado.
-- O texto preenchido no campo "Pauta" e "Acordos Prévios".
-- A resposta integral gerada pela Inteligência Artificial.
+O motor é programado com a seguinte Regra de Ouro (LGPD) injetada no payload da requisição:
+> *"Seu objetivo é preparar o líder para uma reunião de 1:1 e redigir a Ata Oficial [...] sem usar nomes próprios para manter a conformidade com a LGPD."*
 
-## 4. Integração com a LLM (Google Gemini)
-O envio de contexto para a API do Google Gemini obedece a um *Prompt System* estrito, que atua como uma barreira lógica de privacidade. A IA é instruída através da seguinte Regra de Ouro em seu núcleo:
-> *"DIRETRIZ DE PRIVACIDADE (LGPD): NÃO invente nomes reais. Use termos genéricos."*
-
-Dessa forma, garantimos que a plataforma é uma ferramenta de aceleração de processos, totalmente segura e aderente às políticas de governança de dados da Clear IT.
+Através dessa premissa de *Zero PII*, o Smart Leading posiciona-se como uma ferramenta de aceleração cognitiva altamente segura, blindando a Clear IT contra riscos trabalhistas e vazamentos de confidencialidade.

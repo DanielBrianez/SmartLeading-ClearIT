@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Menu, X, Sun, Moon, 
-  User, Calendar, Users, MessageSquare, Settings, LogOut, Trophy, Info, Search, Bell, Zap 
+  User, Calendar, Users, MessageSquare, Settings, LogOut, Trophy, Info, Search, Bell, Zap, BarChart3
 } from 'lucide-react';
 
 import logoImagem from './assets/logo.png';
@@ -13,11 +13,16 @@ import Home from './views/Home';
 import Ranking from './views/Ranking';
 import MeuSquad from './views/MeuSquad';
 import About from './views/About';
+import ProximasReunioes from './views/ProximasReunioes';
+import PainelRH from './views/PainelRH';
 
 export default function App() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('1a1');
+  
+  // 🔥 ESTADO QUE GUARDA QUEM FOI CLICADO LÁ NA ABA DE REUNIÕES!
+  const [lideradoParaPlanejar, setLideradoParaPlanejar] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   
   // Controles de Dropdown
@@ -83,9 +88,10 @@ export default function App() {
   const menuItems = [
     { id: '1a1', label: 'Meus 1:1s', icon: MessageSquare, status: 'ready' },
     { id: 'squad', label: 'Meu Squad', icon: Users, status: 'ready' },
-    { id: 'reunioes', label: 'Próximas Reuniões', icon: Calendar, status: 'wip' },
+    { id: 'reunioes', label: 'Próximas Reuniões', icon: Calendar, status: 'ready' }, // <-- Agora está ready!
     { id: 'ranking', label: 'Liga de Ouro', icon: Trophy, status: 'ready' },
     { id: 'about', label: 'Sobre o Sistema', icon: Info, status: 'ready' },
+    { id: 'painel', label: 'Painel do RH', icon: BarChart3, status: 'ready' },
     { id: 'config', label: 'Ferramentas', icon: Settings, status: 'wip' },
   ];
 
@@ -190,7 +196,16 @@ export default function App() {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
               return (
-                <button key={item.id} onClick={() => { setActiveTab(item.id); if (window.innerWidth < 768) setIsSidebarOpen(false); }} className={`w-full flex items-center justify-between px-5 py-3.5 transition-all text-sm group ${isActive ? 'bg-white dark:bg-slate-800 border-l-4 border-blue-600 font-semibold text-slate-900 dark:text-white shadow-sm' : 'border-l-4 border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white font-medium'}`}>
+                <button 
+                  key={item.id} 
+                  onClick={() => { 
+                    setActiveTab(item.id); 
+                    if (window.innerWidth < 768) setIsSidebarOpen(false); 
+                    // Limpa o cross-routing se o cara clicar num menu aleatório
+                    if (item.id !== '1a1') setLideradoParaPlanejar(null);
+                  }} 
+                  className={`w-full flex items-center justify-between px-5 py-3.5 transition-all text-sm group ${isActive ? 'bg-white dark:bg-slate-800 border-l-4 border-blue-600 font-semibold text-slate-900 dark:text-white shadow-sm' : 'border-l-4 border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white font-medium'}`}
+                >
                   <div className="flex items-center gap-4">
                     <Icon className={`w-5 h-5 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400 group-hover:text-slate-700'}`} />
                     <span>{item.label}</span>
@@ -203,7 +218,7 @@ export default function App() {
 
         {isSidebarOpen && <div className="md:hidden fixed inset-0 bg-slate-900/50 z-30 top-16" onClick={() => setIsSidebarOpen(false)} />}
 
-        {/* MAIN */}
+        {/* MAIN (ROTAS) */}
         <main className="flex-1 h-[calc(100vh-4rem)] overflow-y-auto p-6 md:p-10 relative bg-slate-50 dark:bg-slate-950 w-full">
           <div className="max-w-6xl mx-auto space-y-8 animate-[fadeIn_0.4s_ease-out]">
             <div className="border-b border-slate-200 dark:border-slate-800 pb-6 mb-8">
@@ -211,12 +226,24 @@ export default function App() {
               <p className="text-slate-600 dark:text-slate-400 mt-1">Que bom ver você aqui.</p>
             </div>
 
-            {activeTab === '1a1' && <Home />}
+            {/* 🔥 AQUI ESTÁ A MÁGICA DO ROTEAMENTO! */}
+            {activeTab === '1a1' && <Home lideradoPreSelecionado={lideradoParaPlanejar} />}
             {activeTab === 'squad' && <MeuSquad />}
+
+            {activeTab === 'reunioes' && (
+              <ProximasReunioes 
+                onPlanejar={(id_membro) => { 
+                  setLideradoParaPlanejar(id_membro); 
+                  setActiveTab('1a1'); 
+                }} 
+              />
+            )}
+
             {activeTab === 'ranking' && <Ranking />}
+            {activeTab === 'painel' && <PainelRH />}
             {activeTab === 'about' && <About />}
             
-            {(['reunioes', 'config'].includes(activeTab)) && (
+            {(['config'].includes(activeTab)) && (
               <div className="flex flex-col items-center justify-center py-20 text-slate-400 dark:text-slate-500 space-y-4 bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800">
                 <Settings className="w-16 h-16 animate-spin-slow opacity-20" />
                 <h2 className="text-2xl font-bold text-slate-700 dark:text-slate-300">Em Construção</h2>
@@ -227,4 +254,4 @@ export default function App() {
       </div>
     </div>
   );
-} 
+}

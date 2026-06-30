@@ -8,7 +8,7 @@ import ReactMarkdown from 'react-markdown';
 import html2pdf from 'html2pdf.js';
 import { DB_SQUADS } from '../dados';
 
-export default function Home() {
+export default function Home({ lideradoPreSelecionado }) { 
   const idLiderLogado = "daniel_nascimento";
   const nomeLiderLogado = "DANIEL NASCIMENTO DOS SANTOS FILHO";
   
@@ -17,7 +17,6 @@ export default function Home() {
   const [lideradoSelecionado, setLideradoSelecionado] = useState(null);
   const [senioridade, setSenioridade] = useState('');
   const [tempoCasa, setTempoCasa] = useState('');
-  
   const [perfilLider, setPerfilLider] = useState('');
   const [perfilLiderado, setPerfilLiderado] = useState('');
   const [entregas, setEntregas] = useState('');
@@ -26,9 +25,19 @@ export default function Home() {
   const [resultado, setResultado] = useState('');
   const [erro, setErro] = useState('');
   const [toast, setToast] = useState({ visivel: false, mensagem: '' });
-  
-  // Controle das abas do documento (Confidencial vs RH)
   const [abaDocumento, setAbaDocumento] = useState('roteiro');
+
+  // MÁGICA: Escuta se alguém mandou planejar direto da aba de Próximas Reuniões
+  React.useEffect(() => {
+    if (lideradoPreSelecionado && meuSquad.length > 0) {
+      const liderado = meuSquad.find(m => m.id.toString() === lideradoPreSelecionado.toString());
+      if (liderado) {
+        setLideradoSelecionado(liderado);
+        setSenioridade(liderado.senioridade);
+        setTempoCasa(liderado.tempoCasa);
+      }
+    }
+  }, [lideradoPreSelecionado, meuSquad]);
 
   const mostrarToast = (mensagem) => {
     setToast({ visivel: true, mensagem });
@@ -80,7 +89,7 @@ export default function Home() {
       
       const data = await response.json();
       setResultado(data.roteiro);
-      setAbaDocumento('roteiro'); // Força a aba inicial
+      setAbaDocumento('roteiro'); 
     } catch (err) {
       setErro(err.message || 'Erro inesperado ao gerar roteiro.');
     } finally {
@@ -94,7 +103,6 @@ export default function Home() {
       return;
     }
 
-    // Pega SOMENTE a div da Ata Oficial
     const elemento = document.getElementById('conteudo-ata');
     const opt = {
       margin: 15,
@@ -104,10 +112,8 @@ export default function Home() {
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    // Gera o PDF
     html2pdf().set(opt).from(elemento).save();
 
-    // XP em primeiro lugar
     const rankingSalvo = JSON.parse(localStorage.getItem('@clearit-ranking')) || {};
     const xpAtual = rankingSalvo[idLiderLogado] || 0;
     rankingSalvo[idLiderLogado] = xpAtual + 100;
@@ -122,12 +128,26 @@ export default function Home() {
     };
     
     const notsSalvas = JSON.parse(localStorage.getItem('@clearit-notificacoes')) || [];
-    notsSalvas.unshift(novaNotificacao); // Coloca no começo da lista
+    notsSalvas.unshift(novaNotificacao);
     localStorage.setItem('@clearit-notificacoes', JSON.stringify(notsSalvas));
-    
-    // Dispara o alarme pro App.jsx atualizar o sino na hora!
     window.dispatchEvent(new Event('notificacao-atualizada'));
-    // 👆 --- FIM DA NOVA LÓGICA --- 👆
+
+    const partesTexto = resultado.split(/--- ATA OFICIAL ---|- ATA OFICIAL -|ATA OFICIAL/);
+    const ataParaRH = partesTexto.length > 1 ? partesTexto[1].trim() : resultado;
+
+    const atasSalvas = JSON.parse(localStorage.getItem('@clearit-atas-squad')) || [];
+    const novaAta = {
+      idAta: Date.now(),
+      idLiderado: lideradoSelecionado.id.toString(),
+      nomeLiderado: lideradoSelecionado.nome,
+      cargo: lideradoSelecionado.cargo,
+      senioridade: senioridade,
+      tempoCasa: tempoCasa,
+      data: new Date().toLocaleDateString('pt-BR'),
+      conteudoRH: ataParaRH
+    };
+    atasSalvas.unshift(novaAta); 
+    localStorage.setItem('@clearit-atas-squad', JSON.stringify(atasSalvas));
 
     mostrarToast('✅ Ata baixada com sucesso e 100 XP creditados!');
 
@@ -146,8 +166,6 @@ export default function Home() {
     }
   };
 
-  // --- O TRUQUE DE MESTRE: Separando a IA em duas partes ---
-  // A Regex pega a tag mesmo se a IA colocar "###" ou espaços na frente
   const partesTexto = resultado.split(/--- ATA OFICIAL ---|- ATA OFICIAL -|ATA OFICIAL/);
   const roteiroConfidencial = partesTexto.length > 1 ? partesTexto[0].trim() : 'Roteiro em processamento...';
   const ataParaRH = partesTexto.length > 1 ? partesTexto[1].trim() : resultado;
@@ -168,6 +186,8 @@ export default function Home() {
         
         {/* === LADO ESQUERDO: CONTROLES === */}
         <div className="space-y-6">
+          
+          {/* Autenticação */}
           <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
             <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-4 flex items-center gap-2">
               <User className="w-4 h-4" /> Autenticação e Vínculo
@@ -185,9 +205,10 @@ export default function Home() {
               <div>
                 <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Selecione o Liderado</label>
                 <select 
-                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white"
+                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   onChange={handleLideradoChange}
                   value={lideradoSelecionado ? lideradoSelecionado.id : ''}
+                  disabled={loading}
                   required
                 >
                   <option value="">Selecione um membro do seu Squad...</option>
@@ -199,6 +220,7 @@ export default function Home() {
             </div>
           </div>
 
+          {/* Parâmetros */}
           <form onSubmit={handleGerar} className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 space-y-4">
             <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-4 flex items-center gap-2">
               <Bot className="w-4 h-4" /> Parâmetros da Reunião
@@ -224,7 +246,13 @@ export default function Home() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Seu Perfil (Líder)</label>
-                <select className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm outline-none text-slate-900 dark:text-white" value={perfilLider} onChange={e => setPerfilLider(e.target.value)} required>
+                <select 
+                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm outline-none text-slate-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all" 
+                  value={perfilLider} 
+                  onChange={e => setPerfilLider(e.target.value)} 
+                  disabled={loading}
+                  required
+                >
                   <option value="">Selecione...</option>
                   <option value="Técnico">Técnico</option>
                   <option value="Transição">Em Transição</option>
@@ -233,7 +261,13 @@ export default function Home() {
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Momento do Liderado</label>
-                <select className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm outline-none text-slate-900 dark:text-white" value={perfilLiderado} onChange={e => setPerfilLiderado(e.target.value)} required>
+                <select 
+                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm outline-none text-slate-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all" 
+                  value={perfilLiderado} 
+                  onChange={e => setPerfilLiderado(e.target.value)} 
+                  disabled={loading}
+                  required
+                >
                   <option value="">Selecione...</option>
                   <option value="Motivado e entregando acima do esperado">Alta Performance</option>
                   <option value="Consistente, mas precisa de novos desafios">Zona de Conforto</option>
@@ -242,14 +276,35 @@ export default function Home() {
               </div>
             </div>
 
+            {/* 🔥 NUGGET COMPORTAMENTAL DINÂMICO AQUI! 🔥 */}
+            {perfilLider === 'Técnico' && (
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl flex items-start gap-3 text-sm text-blue-700 dark:text-blue-300 animate-[fadeIn_0.3s]">
+                <span className="text-lg leading-none">🧠</span>
+                <p className="leading-tight"><strong>Nugget Rápido:</strong> Liderança técnica não é sobre ter todas as respostas, mas fazer as perguntas certas. Foque em ouvir mais e direcionar.</p>
+              </div>
+            )}
+            {perfilLider === 'Transição' && (
+              <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl flex items-start gap-3 text-sm text-amber-700 dark:text-amber-300 animate-[fadeIn_0.3s]">
+                <span className="text-lg leading-none">🌱</span>
+                <p className="leading-tight"><strong>Nugget Rápido:</strong> Conversas difíceis constroem times fortes. Use a escuta ativa e não tenha medo de demonstrar empatia antes de cobrar.</p>
+              </div>
+            )}
+            {perfilLider === 'Engajado' && (
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl flex items-start gap-3 text-sm text-emerald-700 dark:text-emerald-300 animate-[fadeIn_0.3s]">
+                <span className="text-lg leading-none">🚀</span>
+                <p className="leading-tight"><strong>Nugget Rápido:</strong> Seu time confia em você! O desafio de hoje é sair do micro-gerenciamento e focar em desbloquear o caminho para eles.</p>
+              </div>
+            )}
+
             <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Foco / Entregas Recentes</label>
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1 mt-1">Foco / Entregas Recentes</label>
               <textarea 
-                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm outline-none text-slate-900 dark:text-white resize-none"
+                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm outline-none text-slate-900 dark:text-white resize-none disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 rows="3"
                 placeholder="Ex: Entregou o projeto X com atraso."
                 value={entregas}
                 onChange={e => setEntregas(e.target.value)}
+                disabled={loading}
                 required
               />
             </div>
@@ -257,7 +312,7 @@ export default function Home() {
             <button 
               type="submit" 
               disabled={loading || !lideradoSelecionado}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50 mt-2 shadow-sm shadow-blue-600/20"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-2 shadow-sm shadow-blue-600/20"
             >
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
               {loading ? 'Processando com IA...' : 'Gerar Roteiro Estratégico'}
@@ -269,7 +324,6 @@ export default function Home() {
         {/* === LADO DIREITO: RESULTADO (ABAS) === */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col min-h-[600px] overflow-hidden">
           
-          {/* Header com as Abas */}
           <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50">
             <button 
               disabled={!resultado}
@@ -323,12 +377,10 @@ export default function Home() {
                 </button>
               </div>
 
-              {/* MÁGICA DO PDF: Fundo branco e texto preto FORÇADO para impressão perfeita */}
               <div 
                 id="conteudo-ata" 
                 className="bg-white text-slate-900 p-6 md:p-8 rounded-xl border border-slate-200 shadow-sm"
               >
-                {/* Cabeçalho Bonito */}
                 <div className="mb-8 border-b-2 border-slate-200 pb-6">
                   <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-4">Ata Oficial de Alinhamento 1:1</h2>
                   <div className="grid grid-cols-2 gap-y-4 gap-x-8 text-sm">
@@ -351,12 +403,10 @@ export default function Home() {
                   </div>
                 </div>
                 
-                {/* O Markdown renderizado sem influências do Dark Mode */}
                 <div className="prose prose-sm max-w-none prose-slate text-slate-800">
                   <ReactMarkdown>{ataParaRH}</ReactMarkdown>
                 </div>
                 
-                {/* Rodapé de Assinaturas */}
                 <div className="mt-16 pt-8 grid grid-cols-2 gap-8 text-center">
                   <div>
                     <div className="border-b border-slate-400 w-3/4 mx-auto mb-2"></div>

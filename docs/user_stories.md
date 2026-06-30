@@ -1,47 +1,52 @@
-# 👤 Histórias de Usuário (User Stories)
+# 👤 Histórias de Usuário (User Stories) - Smart Leading
 
-As histórias de usuário abaixo detalham as necessidades dos diferentes atores envolvidos no ecossistema do **Smart Leading**, orientando o desenvolvimento e as prioridades do MVP.
+As histórias de usuário abaixo detalham as necessidades resolvidas dos diferentes atores envolvidos no ecossistema do **Smart Leading**, refletindo o escopo 100% concluído do nosso MVP.
 
-## Épico 1: Preparação e Condução da 1:1
-**US01 - Geração de Roteiro Inteligente**
+## Épico 1: Preparação Inteligente e Condução (Metodologia CRIA)
+**US01 - Geração de Roteiro Paramétrico (CRIA)**
 > **Como** líder, 
-> **Eu quero** inserir os perfis comportamentais e as últimas entregas do meu liderado, 
-> **Para que** a IA gere um roteiro de 1:1 estruturado, focado e personalizado, reduzindo meu tempo de preparação.
+> **Eu quero** inserir a senioridade, entregas recentes e momento do meu liderado, 
+> **Para que** a IA gere um roteiro de 1:1 estruturado com base na metodologia CRIA (Contexto, Redirecionamento, Impacto e Alinhamento), garantindo feedbacks altamente acionáveis.
 
-**US02 - Foco em Tela Única (SPA)**
-> **Como** usuário do sistema, 
-> **Eu quero** realizar todo o fluxo (preencher dados, ler o roteiro, assinar e baixar) na mesma tela, 
-> **Para que** eu não perca o foco abrindo dezenas de abas durante ou antes da reunião.
+**US02 - Gatilhos Comportamentais (Nuggets)**
+> **Como** gestor em desenvolvimento, 
+> **Eu quero** receber pílulas rápidas de postura ("Nuggets") logo após selecionar o meu perfil de liderança (Técnico, Transição ou Engajado), 
+> **Para que** eu calibre meu tom de voz e minha abordagem de empatia antes mesmo de gerar a pauta com a IA.
 
-## Épico 2: Governança, LGPD e Compartilhamento
-**US03 - Geração de Ata Oficial (PDF)**
-> **Como** gestor responsável, 
-> **Eu quero** assinar e baixar a ata de alinhamento em PDF diretamente no meu navegador, 
-> **Para que** eu tenha um documento oficial do que foi acordado sem que a empresa armazene o conteúdo em servidores desprotegidos.
-
-**US04 - Envio Fácil ao Liderado e RH** *(Em desenvolvimento)*
+**US03 - Navegação Fluida e Cross-Routing (SPA)**
 > **Como** líder, 
-> **Eu quero** um botão rápido para compartilhar o sumário ou o PDF diretamente com o liderado e com o RH em cópia, 
-> **Para que** eu garanta total transparência sobre a reunião e registre as informações para os ciclos de calibração de performance.
+> **Eu quero** clicar em "Planejar Agora" no Radar de Reuniões e ser redirecionado para a Home com os dados do liderado já preenchidos, 
+> **Para que** eu ganhe tempo e não precise reescrever informações entre telas.
 
-## Épico 3: Gamificação e Engajamento
-**US05 - Recompensa por Disciplina (XP)**
-> **Como** líder competitivo, 
-> **Eu quero** receber pontos (XP) sempre que eu baixar oficialmente uma Ata de reunião, 
-> **Para que** eu suba no ranking da "Liga de Ouro" e meu esforço na gestão de pessoas seja reconhecido.
+## Épico 2: Governança e Compliance (LGPD)
+**US04 - Geração de Ata Oficial Segura (Zero PII)**
+> **Como** gestor responsável e parceiro do RH, 
+> **Eu quero** baixar a ata oficial de alinhamento em PDF diretamente pelo meu navegador, gerada a partir da pauta confidencial, 
+> **Para que** eu tenha o registro formal do encontro sem que dados pessoais e sensíveis transitem ou sejam salvos no servidor da empresa (Conformidade LGPD).
 
-**US06 - Missões e Frases Motivadoras** *(Em desenvolvimento)*
+**US05 - Gestão Ativa e Lixeira Inteligente**
 > **Como** líder, 
-> **Eu quero** que a IA me sugira uma "Missão" clara e uma frase motivadora personalizada no final do roteiro, 
-> **Para que** eu consiga engajar meu liderado com um desafio prático até o nosso próximo alinhamento.
+> **Eu quero** gerenciar os Planos de Desenvolvimento Individual (PDIs) e adiar reuniões diretamente no Radar, com opção de exclusão (Lixeira), 
+> **Para que** meu painel de gestão fique sempre limpo e focado apenas nas ações e ritos pendentes.
+
+## Épico 3: Motor de Maturidade e Gamificação
+**US06 - Liga de Ouro Dinâmica (Ranking)**
+> **Como** líder engajado, 
+> **Eu quero** que minha posição no ranking seja calculada não apenas por XP, mas por drivers reais (Atas baixadas, Ritos realizados e PDIs ativos), 
+> **Para que** a gamificação seja justa (com regras de desempate por engajamento) e eu consiga filtrar os líderes destaque pela minha Área de Atuação.
+
+**US07 - Títulos de Maturidade Corporativa**
+> **Como** usuário da Liga de Ouro, 
+> **Eu quero** que o sistema me classifique automaticamente (Iniciante, Em Desenvolvimento, Consistente, Referência) com base no meu engajamento, 
+> **Para que** eu tenha clareza do meu nível atual de maturidade na gestão de pessoas.
 
 ## Épico 4: Telemetria e People Analytics
-**US07 - Auditoria Silenciosa (Logs)**
+**US08 - Dashboard Interativo de RH (Power BI Style)**
 > **Como** analista de RH (People Analytics), 
-> **Eu quero** que o sistema registre anonimamente os metadados das reuniões (perfil, data, confirmação de download) em um arquivo de log seguro, 
-> **Para que** eu consiga medir o engajamento geral da liderança sem ferir a privacidade do que foi conversado.
+> **Eu quero** acessar um painel gerencial onde eu possa clicar nas barras do gráfico de adoção mensal e ver os KPIs (Atas, PDIs, eNPS) atualizarem em tempo real, 
+> **Para que** eu consiga analisar a saúde da liderança e a adesão ao sistema de forma dinâmica e granular.
 
-**US08 - Avaliação de Utilidade (Feedback)** *(Em desenvolvimento)*
-> **Como** liderado, 
-> **Eu quero** receber uma pergunta rápida após a reunião para avaliar se o alinhamento foi útil, 
-> **Para que** o RH saiba se a qualidade da liderança está realmente melhorando.
+**US09 - Injeção de Dados de Demonstração (Mocks)**
+> **Como** Desenvolvedor / Tech Lead apresentando o sistema, 
+> **Eu quero** um botão na aba "Sobre o Sistema" que autopopule os cofres locais com 18 logs reais simulados, 
+> **Para que** eu consiga validar os gráficos do RH e a gamificação do ranking imediatamente durante uma demonstração de produto.

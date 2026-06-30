@@ -43,16 +43,19 @@ def gerar_roteiro_ia(dados: dict) -> str:
         ESTRUTURA OBRIGATÓRIA DA SUA RESPOSTA:
         Você deve dividir sua resposta em duas partes, usando formatação Markdown. Separe-as EXATAMENTE por esta tag: --- ATA OFICIAL ---
 
-        ROTEIRO DO LÍDER (Confidencial)
-        - Crie o roteiro da 1:1 dividido em: Abertura, Desenvolvimento da Pauta e Próximos Passos.
-        - OBRIGATÓRIO: O "Desenvolvimento da Pauta" DEVE ser 100% focado neste assunto: "{entregas}". Aborde DIRETAMENTE os problemas, absurdos ou sucessos relatados aqui, preparando o líder para lidar com ESSA situação específica.
-        - Dê dicas de postura e correções de tom baseadas no perfil do Líder ({perfil_lider}).
-        - Sugira perguntas focadas no momento atual do liderado ({perfil_comportamental}).
+        ### PARTE 1: ROTEIRO DO LÍDER (Confidencial)
+        - OBRIGATÓRIO: O "Desenvolvimento da Pauta" DEVE ser 100% focado neste assunto: "{entregas}". 
+        - Você DEVE estruturar a abordagem de feedback utilizando a Metodologia CRIA, dividindo em 4 tópicos com bullet points:
+          * [C] Contexto: Descreva a situação específica relatada nas entregas, sem generalizar.
+          * [R] Redirecionamento: O que precisa mudar ou ser mantido/reforçado na atitude ou entrega técnica.
+          * [I] Impacto: Como essa atitude/entrega afeta o projeto, o squad e os resultados da Clear IT.
+          * [A] Alinhar: Sugestões de perguntas para o líder fazer ao liderado para construir um acordo ou plano de ação.
+        - Dê breves dicas de postura baseadas no perfil do Líder ({perfil_lider}).
 
         --- ATA OFICIAL ---
 
-        RESUMO DO ALINHAMENTO
-        - Escreva de forma formal, impessoal e corporativa (este texto irá para o RH).
+        ### PARTE 2: RESUMO DO ALINHAMENTO (Para RH)
+        - Escreva de forma formal, impessoal e corporativa.
         - Comece OBRIGATORIAMENTE com: "Nesta reunião de alinhamento, conversamos sobre os seguintes tópicos..."
         - Faça o resumo profissional focado em: {entregas}. Crie sugestões de acordos firmados.
         """
