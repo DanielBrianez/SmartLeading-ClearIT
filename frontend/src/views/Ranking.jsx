@@ -20,59 +20,60 @@ export default function Ranking() {
     // Ritos = Atas geradas + 1 (reunião inicial)
     const ritosRealizados = atasGeradas > 0 ? atasGeradas + 1 : 0;
 
-    // 2. Base de Competidores (Mocks + Dados Iniciais)
+    // 2. Base de Competidores (Adicionamos o Daniel aqui pra facilitar o merge)
     const baseCompetidores = [
-      { 
-        id: 'daniel_nascimento', nome: 'Daniel Nascimento', cargo: 'Tech Lead', area: 'Engenharia', foto: minhaFoto, 
-        xpBase: 0, ritosBase: 0, atasBase: 0, pdisBase: 0 
-      },
-      { 
-        id: 'juliana_castro', nome: 'Juliana Castro', cargo: 'Agile Coach', area: 'Produto', foto: null, 
-        xpBase: 450, ritosBase: 5, atasBase: 4, pdisBase: 2 
-      },
-      { 
-        id: 'marcos_vinicius', nome: 'Marcos Vinícius', cargo: 'Coord. de TI', area: 'Engenharia', foto: null, 
-        xpBase: 850, ritosBase: 12, atasBase: 10, pdisBase: 8 
-      },
-      { 
-        id: 'sara_lima', nome: 'Sara Lima', cargo: 'Design Lead', area: 'Design', foto: null, 
-        xpBase: 300, ritosBase: 3, atasBase: 2, pdisBase: 1 
-      },
-      { 
-        id: 'carlos_eduardo', nome: 'Carlos Eduardo', cargo: 'Engenheiro Sênior', area: 'Engenharia', foto: null, 
-        xpBase: 450, ritosBase: 4, atasBase: 2, pdisBase: 1 // Mesmo XP da Juliana, mas perde no desempate de Atas
-      }
+      { id: 'daniel_nascimento', nome: 'Daniel Nascimento', cargo: 'Tech Lead', area: 'Engenharia', foto: minhaFoto, atasBase: 0, pdisBase: 0, ritosBase: 0, xpBase: 0 },
+      { id: 'juliana_castro', nome: 'Juliana Castro', cargo: 'Tech Lead', area: 'Produto', atasBase: 12, pdisBase: 4, ritosBase: 15, xpBase: 450 },
+      { id: 'marcos_vinicius', nome: 'Marcos Vinícius', cargo: 'Engenheiro Sênior', area: 'Engenharia', atasBase: 25, pdisBase: 8, ritosBase: 28, xpBase: 850 },
+      { id: 'sara_lima', nome: 'Sara Lima', cargo: 'Agile Coach', area: 'Operações', atasBase: 8, pdisBase: 2, ritosBase: 10, xpBase: 300 },
+      { id: 'roberto_alves', nome: 'Roberto Alves', cargo: 'Tech Lead', area: 'Engenharia', atasBase: 15, pdisBase: 5, ritosBase: 18, xpBase: 550 }
     ];
 
-    // 3. Processa o Motor de Maturidade
-    const rankingCalculado = baseCompetidores.map(lider => {
-      // Se for o Daniel, injeta os dados reais do sistema. Se não, usa o base.
+    // 3. Atualiza os dados com base no que está salvo ou simulado
+    let dadosAtualizados = baseCompetidores.map(lider => {
       const isLogado = lider.id === 'daniel_nascimento';
-      const xpTotal = lider.xpBase + (isLogado ? xpGanho : 0);
-      const atasTotal = lider.atasBase + (isLogado ? atasGeradas : 0);
-      const ritosTotal = lider.ritosBase + (isLogado ? ritosRealizados : 0);
-      const pdisTotal = lider.pdisBase + (isLogado ? pdisAtivos : 0);
-
-      // Calculadora de Nível de Maturidade (Dor 1)
-      let maturidade = { nivel: 'Iniciante', cor: 'bg-slate-100 text-slate-600 border-slate-200' };
-      if (xpTotal >= 800) maturidade = { nivel: 'Referência', cor: 'bg-purple-100 text-purple-700 border-purple-200' };
-      else if (xpTotal >= 500) maturidade = { nivel: 'Consistente', cor: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
-      else if (xpTotal >= 200) maturidade = { nivel: 'Em Desenvolvimento', cor: 'bg-blue-100 text-blue-700 border-blue-200' };
+      
+      // O XP tenta pegar do Injetor de Mocks, se não tiver, usa o base
+      const xpLocal = rankingSalvo[lider.id];
+      const xpTotal = isLogado ? (xpLocal || xpGanho) : (xpLocal || lider.xpBase);
+      
+      const atasTotal = isLogado ? atasGeradas : lider.atasBase;
+      const ritosTotal = isLogado ? ritosRealizados : lider.ritosBase;
+      const pdisTotal = isLogado ? pdisAtivos : lider.pdisBase;
 
       return {
-        ...lider, xpTotal, atasTotal, ritosTotal, pdisTotal, maturidade
+        ...lider,
+        xpTotal,
+        atasTotal,
+        ritosTotal,
+        pdisTotal
       };
     });
 
     // 4. Regra de Ordenação com DESEMPATE POR ATAS (Dor 1)
-    rankingCalculado.sort((a, b) => {
+    dadosAtualizados.sort((a, b) => {
       if (b.xpTotal !== a.xpTotal) {
         return b.xpTotal - a.xpTotal; // Maior XP primeiro
       }
       return b.atasTotal - a.atasTotal; // Desempate: Maior taxa de Atas
     });
 
-    setLideres(rankingCalculado);
+    // 5. Calculadora de Nível de Maturidade (Dor 1)
+    const calcularMaturidade = (xp, atas) => {
+      if (xp >= 800 && atas >= 20) return { nivel: 'Referência', cor: 'text-amber-500', bg: 'bg-amber-100 dark:bg-amber-900/30' };
+      if (xp >= 500 && atas >= 10) return { nivel: 'Consistente', cor: 'text-blue-500', bg: 'bg-blue-100 dark:bg-blue-900/30' };
+      if (xp >= 200) return { nivel: 'Em Desenvolvimento', cor: 'text-emerald-500', bg: 'bg-emerald-100 dark:bg-emerald-900/30' };
+      return { nivel: 'Iniciante', cor: 'text-slate-500', bg: 'bg-slate-100 dark:bg-slate-800' };
+    };
+
+    // 6. Finalmente cria o array do Ranking aplicando as posições e maturidade
+    const rankingFinal = dadosAtualizados.map((lider, index) => ({
+      ...lider,
+      posicao: index + 1,
+      maturidade: calcularMaturidade(lider.xpTotal, lider.atasTotal)
+    }));
+
+    setLideres(rankingFinal);
   }, []);
 
   // Extrai as áreas únicas para o filtro
@@ -128,7 +129,7 @@ export default function Ranking() {
             <div className="flex items-center gap-4 lg:gap-6">
               {/* Posição */}
               <div className="w-10 text-center font-black text-3xl text-slate-300 dark:text-slate-600">
-                #{index + 1}
+                #{lider.posicao}
               </div>
               
               {/* Foto */}
@@ -152,7 +153,7 @@ export default function Ranking() {
                     {lider.nome}
                   </h3>
                   {/* BADGE DE MATURIDADE DINÂMICA */}
-                  <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded border ${lider.maturidade.cor}`}>
+                  <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded border ${lider.maturidade.cor} ${lider.maturidade.bg}`}>
                     {lider.maturidade.nivel}
                   </span>
                 </div>

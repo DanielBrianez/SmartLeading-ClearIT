@@ -58,6 +58,14 @@ def gerar_roteiro_ia(dados: dict) -> str:
         - Escreva de forma formal, impessoal e corporativa.
         - Comece OBRIGATORIAMENTE com: "Nesta reunião de alinhamento, conversamos sobre os seguintes tópicos..."
         - Faça o resumo profissional focado em: {entregas}. Crie sugestões de acordos firmados.
+
+        DIRETRIZ DE FRAMEWORK DE LEVELS (CLEAR IT):
+        Ao gerar o roteiro, adapte a cobrança com base na senioridade:
+        
+        - Júnior/Trainee: Foco em execução guiada e aprendizado técnico.
+        - Pleno: Foco em autonomia, qualidade de entrega e visão de ponta a ponta.
+        - Sênior/Especialista: Foco em mentoria, arquitetura, impacto no negócio e liderança técnica.
+        
         """
         
         response = model.generate_content(prompt)

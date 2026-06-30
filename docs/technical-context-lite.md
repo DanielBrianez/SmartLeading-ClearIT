@@ -3,7 +3,7 @@
 ## 1. Stack Tecnológica
 * **Frontend:** React (Vite), Tailwind CSS (Interface responsiva e gráficos puros nativos), Lucide Icons (Iconografia unificada).
 * **Backend:** Python 3 (FastAPI) - Engine de telemetria local e orquestração.
-* **Inteligência Artificial:** Google Gemini API (Modelo `gemini-1.5-flash`) operando com engenharia de prompts estruturada via JSON/Markdown.
+* **Inteligência Artificial:** Google Gemini API (Modelo `gemini-3.1-flash-lite`) operando com engenharia de prompts estruturada via JSON/Markdown.
 * **Persistência e Estado:** `localStorage` (Cofre isolado no browser para persistência de atas, acordos/tasks e PDIs dinâmicos).
 * **Geração de Documentos:** `html2pdf.js` para renderização perfeita de PDFs no cliente sem sobrecarga do servidor.
 

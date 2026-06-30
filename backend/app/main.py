@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from datetime import datetime
 from pathlib import Path
+import os
 
 # 👇 Importando a nossa inteligência encapsulada!
 from app.core.gemini import gerar_roteiro_ia
@@ -36,9 +37,9 @@ class DownloadLogRequest(BaseModel):
 
 # --- FUNÇÕES AUXILIARES ---
 def salvar_linha_log(linha_texto: str):
-    pasta_logs = Path("logs")
-    pasta_logs.mkdir(exist_ok=True)
-    filepath = pasta_logs / "smart_leading_logs.csv"
+    pasta_logs = Path("data")
+    os.makedirs("data", exist_ok=True)
+    filepath = pasta_logs / "telemetry_logs.csv"
     
     if not filepath.exists():
         # Cabeçalho atualizado

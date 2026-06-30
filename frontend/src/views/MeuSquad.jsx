@@ -61,6 +61,13 @@ export default function MeuSquad() {
 
   // FUNÇÕES DE SALVAR / EDITAR TASKS
   const handleSalvarTask = (e) => {
+
+    const tarefasAtuais = tasks.filter(t => t.idLiderado === idSelecionado && t.status !== 'concluida');
+    if (tarefasAtuais.length >= 3) {
+      alert("⚠️ Limite atingido! O Framework da Clear IT foca no essencial. Não crie mais de 3 metas ativas por vez para este liderado.");
+      return;
+    }
+    
     e.preventDefault();
     let atualizadas = [...tasksSalvas];
 

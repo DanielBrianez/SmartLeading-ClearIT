@@ -375,6 +375,13 @@ export default function Home({ lideradoPreSelecionado }) {
                 <button onClick={handleDownloadPDF} className="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold shadow-sm transition-all">
                   <Download className="w-4 h-4" /> Gerar PDF
                 </button>
+                {/* NOVO BOTÃO: Compartilhamento rápido com Liderado */}
+                <a 
+                  href={`mailto:?subject=Ata da nossa Reunião 1:1&body=Olá! Nossa reunião de 1:1 foi muito produtiva. Estou com os combinados registrados aqui. Por favor, confira as ações do seu PDI no sistema. Um abraço!`}
+                  className="px-6 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl font-bold transition-all shadow-sm flex items-center gap-2"
+                >
+                  📧 Enviar ao Liderado
+               </a>
               </div>
 
               <div 
