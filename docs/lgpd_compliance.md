@@ -14,17 +14,15 @@ A compilação e geração do documento final (Ata Oficial de Alinhamento) é re
 - O arquivo contendo os detalhes discutidos é baixado localmente para a máquina do líder.
 - A aplicação não intercepta, não trafega e não retém cópias do arquivo PDF gerado.
 
-## 3. Telemetria e People Analytics (Zero PII)
-O inovador Painel do RH (People Analytics) gera métricas avançadas (Volume de Ritos, eNPS Preditivo, Taxa de Adoção) **agregando dados anonimizados localmente**. 
+## 3. Telemetria e People Analytics (Pseudonimização Assimétrica - ADR 03)
+O Painel de RH (People Analytics) do Smart Leading gera métricas de engajamento, cadência e temas baseando-se no modelo de **Pseudonimização Assimétrica**:
+- **Preservação de Dados de Liderança:** Para viabilizar a Liga de Ouro, o ranking e o acompanhamento de PDL pelo RH, registramos o `ID_do_Líder` e a `Diretoria`. Isso permite descobrir qual líder precisa de suporte sem violar a privacidade de quem foi avaliado.
+- **Descarte Permanente do Liderado:** O `ID_do_Liderado` (colaborador) é deletado no pipeline de telemetria de clima e macrotemas.
+- **N-Size Masking:** Equipes/squads com menos de 5 liderados têm seus dados temáticos consolidados em grupos genéricos no Heatmap para impossibilitar a re-identificação acidental.
+- **Segregação do Alerta de Risco (F-17):** O checkbox de risco nominal grava as identidades localmente no banco corporativo seguro. O texto explicativo contendo a causa-raiz passa por mascaramento completo (substituindo nomes por `[COLABORADOR]`) via AI Gateway antes de ser enviado à IA.
 
-Para fins de auditoria e gamificação (Liga de Ouro), os logs de telemetria enviados ao Back-end registram **apenas metadados genéricos**:
-- **O que é registrado:** Timestamp, Nome do Líder (Agente), Senioridade/Comportamento do liderado selecionado e Confirmação de Evento (`Baixou_Ata = Sim`).
-- **O que é bloqueado na raiz:** O nome do Liderado, o detalhamento técnico da "Pauta/Entregas", os acordos firmados no PDI e o Roteiro Confidencial gerado pela IA.
-
-## 4. Blindagem do Motor Paramétrico (Google Gemini)
-O envio do contexto da reunião para a API do Google Gemini obedece a um *Prompt System* estrito (`AGENTS.md`), que atua como uma barreira lógica de privacidade. 
-
-O motor é programado com a seguinte Regra de Ouro (LGPD) injetada no payload da requisição:
-> *"Seu objetivo é preparar o líder para uma reunião de 1:1 e redigir a Ata Oficial [...] sem usar nomes próprios para manter a conformidade com a LGPD."*
-
-Através dessa premissa de *Zero PII*, o Smart Leading posiciona-se como uma ferramenta de aceleração cognitiva altamente segura, blindando a Clear IT contra riscos trabalhistas e vazamentos de confidencialidade.
+## 4. Blindagem do Motor de IA e AI Gateway (ADR 02)
+O fluxo de envio de dados para a API do Gemini é interceptado por um **LLM Firewall** (AI Gateway Proxy) e uma camada client-side:
+- **Tokenização Local (Navegador):** Varre o texto e substitui padrões de CPF e RG por `[DOCUMENTO]`.
+- **Gateway Proxy FastAPI:** Intercepta menções a doenças, atestados ou problemas médicos substituindo por placeholders padronizados (ex: `[MOTIVO_MÉDICO_REDUZIDO]`).
+- **Zero-Retention:** Os dados de ata e roteiros não são armazenados pelo provedor de LLM nem utilizados para treinamento de modelos públicos.

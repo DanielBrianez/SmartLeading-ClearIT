@@ -37,11 +37,12 @@ O sistema possui dois fluxos principais, desenhados para mitigar riscos de segur
 
 ---
 
-## 3. Segurança e "LGPD By Design"
+## 3. Segurança e "LGPD By Design" (ADR 02 e ADR 03)
 
-A arquitetura blinda a empresa contra riscos trabalhistas e vazamentos através de três pilares:
+A arquitetura blinda a empresa contra riscos trabalhistas, passivos legais e vazamentos através de quatro pilares estruturais de segurança logicamente definidos:
 
-- **Geração Client-Side Exclusiva:** O documento PDF (que contém o nome e o histórico do colaborador) nasce e morre no navegador. O Back-end nunca recebe o arquivo compilado, impossibilitando interceptações.
-- **Isolamento de Estado (Zero DB):** Como não há banco de dados relacional centralizando as avaliações comportamentais da empresa inteira, anula-se o risco de ataques cibernéticos em massa (Data Breaches) direcionados a informações sensíveis de RH.
-- **Blindagem de Prompt (Zero PII):** A instrução base da IA proíbe taxativamente a invenção ou utilização de nomes reais, operando sempre com *placeholders* ou termos genéricos.
-- **Isolamento de Credenciais:** A chave do LLM (`GEMINI_API_KEY`) reside apenas no servidor (via arquivo `.env`). O cliente (navegador) jamais acessa tokens sensíveis.
+- **Tokenização Client-Side:** O navegador realiza a varredura e substituição imediata de padrões numéricos como CPF e RG por `[DOCUMENTO]` antes de trafegar os dados.
+- **AI Gateway Proxy (LLM Firewall):** Camada intermediária no backend FastAPI que intercepta o texto livre e realiza a higienização semântica de CIDs, sintomas ou menções médicas (ex: *"está com depressão"* vira `[MOTIVO_MÉDICO_REDUZIDO]`), destruindo o texto bruto em memória RAM efêmera.
+- **Pseudonimização Assimétrica:** O pipeline de análise de macrotemas e clima do RH preserva a identificação do líder (`ID_do_Líder` e `Diretoria`) para direcionamento de treinamentos, mas descarta permanentemente o `ID_do_Liderado`.
+- **Segregação de Dados de Risco (Opt-In):** Para a sinalização de colaboradores em risco crítico (F-17), a associação nominal fica restrita ao banco relacional local seguro da ClearIT. O texto contendo as dores do colaborador é enviado à IA de forma 100% anonimizada (`[COLABORADOR]`) apenas para categorização do risco.
+- **Isolamento de Credenciais e Zero-Retention:** A chave do modelo de IA (`GEMINI_API_KEY`) reside apenas nas variáveis secretas do backend, operando em modo corporativo com garantia de não-utilização dos dados para treinamento.
