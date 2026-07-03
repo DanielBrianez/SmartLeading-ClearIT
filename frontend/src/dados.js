@@ -18,7 +18,7 @@ export const MENTEES = [
 
 export const TEAM_MEMBERS = [
   { id: 1, name: 'Daniel Nascimento', role: 'Tech Lead', color: '2563EB', foto: minhaFoto },
-  { id: 2, name: 'Bruno Costa', role: 'UX/UI Designer', color: '059669' },
+  { id: 2, name: 'Yasmim Dias', role: 'Product Owner', color: '059669' },
   { id: 3, name: 'Carla Dias', role: 'Engenheira Front-end', color: '7C3AED' },
   { id: 4, name: 'Diego Silva', role: 'Engenheiro Back-end', color: 'DC2626' },
   { id: 5, name: 'Elena Souza', role: 'Product Manager', color: 'D97706' },

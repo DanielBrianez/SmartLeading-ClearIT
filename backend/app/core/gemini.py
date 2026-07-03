@@ -54,7 +54,7 @@ def gerar_roteiro_ia(dados: dict) -> str:
 
         --- ATA OFICIAL ---
 
-        ### PARTE 2: RESUMO DO ALINHAMENTO (Para RH)
+        RESUMO DO ALINHAMENTO
         - Escreva de forma formal, impessoal e corporativa.
         - Comece OBRIGATORIAMENTE com: "Nesta reunião de alinhamento, conversamos sobre os seguintes tópicos..."
         - Faça o resumo profissional focado em: {entregas}. Crie sugestões de acordos firmados.
