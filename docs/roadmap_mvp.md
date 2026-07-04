@@ -7,14 +7,14 @@ O objetivo desta fase foi validar o conceito principal, garantindo a geração d
 - [x] Estruturação da arquitetura de ficheiros (*Clean Code*).
 - [x] Integração com a API do Google Gemini (Motor de Inteligência Artificial).
 - [x] Criação do Mega-Prompt com foco na adaptação comportamental do líder e liderado.
-- [x] Geração de Ata Oficial em PDF (*fpdf*) com injeção local de dados.
-- [x] Conformidade total com a LGPD (*Privacy by Design*).
+- [x] Geração de Ata Oficial em PDF via frontend (*html2pdf.js*) com privacidade e injeção local de dados.
+- [x] Conformidade total com a LGPD (*Privacy by Design* / Tokenização local).
 
 ## 🎨 Fase 2: UI/UX e Telemetria (Ajustes Finos) - *Em Progresso*
 Foco na melhoria da experiência do utilizador (líderes) e na recolha de métricas silenciosas para o departamento de Recursos Humanos.
-- [x] Melhoria visual do ecrã no Streamlit (Injeção de CSS personalizado, cores da marca e logótipo).
-- [x] Implementação de sistema de *Logs Ocultos* num ficheiro `.csv` para telemetria (rastreio de perfis mais utilizados, seniores vs. juniores, e volume de atas geradas).
-- [x] Refinamento das regras de negócio do motor de Gamificação (Missões mais robustas e sistema de XP balanceado).
+- [x] Melhoria visual da interface em React/Vite (Customização visual, cores da marca e logótipo).
+- [x] Implementação de sistema de telemetria integrada via banco de dados **PostgreSQL Serverless** (com suporte inicial a `.csv` local) para rastreio de perfis de liderança e volumes de uso.
+- [x] Implementação das regras do motor de Gamificação e classificação da Liga de Líderes com **Validação Bilateral** de XP entre líder e liderado.
 
 ## 📊 Fase 3: Portal de *People Analytics* (Painel de RH) - *Em Planeamento*
 Expansão do produto para atender também aos gestores de Recursos Humanos, dando visibilidade aos dados recolhidos.
