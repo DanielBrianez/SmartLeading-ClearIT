@@ -258,4 +258,3 @@ A plataforma automatiza a carga cognitiva de planejamento, customiza as abordage
 *   **Headcount de Referência (Total 68 colaboradores):**
     - Diretoria: 6 | Comercial: 16 | Pré-vendas: 5 | Pós-vendas: 20 | Alianças e Parcerias: 4 | Contratos e Licitações: 2 | Precificação e Suprimentos: 3 | Financeiro: 6 | RH: 4 | Marketing: 2.
 *   **Mapeamento de Maturidade Cultural:** A ClearIT possui uma cultura de feedback implantada há 5 meses baseada em treinamentos das lideranças. O primeiro Comitê de Calibração ocorrerá entre Outubro e Dezembro, e a primeira rodada da AvD anual iniciará em Setembro de 2026.
-

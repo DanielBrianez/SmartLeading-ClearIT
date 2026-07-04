@@ -32,13 +32,6 @@ export const LEADERBOARD = [
   { id: 5, name: 'Thiago Mendes', role: 'Tech Lead', xp: 6100, avatar: 'TM' },
   ];
 
-  // Adicione isso no final do seu src/dados.js
-
-// Simulando o retorno de um Banco de Dados Relacional (Ex: PostgreSQL)
-// src/dados.js (Substitua a constante DB_SQUADS)
-
-// src/dados.js (Atualize a constante DB_SQUADS)
-
 export const DB_SQUADS = {
   "daniel_nascimento": [
     { 
