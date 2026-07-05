@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { 
   Rocket, Code2, Database, Zap, ShieldCheck, 
-  CheckCircle2, AlertTriangle, Code, Server 
+  CheckCircle2, AlertTriangle, Code, Server, X
 } from 'lucide-react';
 
 // Importamos o componente da equipe para dentro do Sobre!
@@ -10,19 +10,31 @@ import Equipe from './Equipe';
 
 export default function About() {
   const [abaInterna, setAbaInterna] = useState('projeto');
-  const [toast, setToast] = useState({ visivel: false, mensagem: '' });
+  
+  // 🔥 ESTADO DO BALÃOZINHO PREMIUM (TOAST)
+  const [balaoAviso, setBalaoAviso] = useState({ visivel: false, mensagem: '', tipo: 'sucesso' });
+  
+  // 🔥 ESTADO DO MODAL DE CONFIRMAÇÃO
+  const [modalConfirm, setModalConfirm] = useState({
+    visivel: false,
+    titulo: '',
+    mensagem: '',
+    textoBotao: '',
+    corBotao: '',
+    acaoConfirmar: null
+  });
 
-  const mostrarToast = (mensagem) => {
-    setToast({ visivel: true, mensagem });
+  const mostrarBalao = (mensagem, tipo = 'sucesso') => {
+    setBalaoAviso({ visivel: true, mensagem, tipo });
     setTimeout(() => {
-      setToast({ visivel: false, mensagem: '' });
+      setBalaoAviso({ visivel: false, mensagem: '', tipo: 'sucesso' });
       window.location.reload(); // Recarrega a página para espalhar os dados por todos os componentes!
-    }, 2000);
+    }, 2500); 
   };
 
-  const handleInjetarMocks = () => {
-    const confirma = window.confirm("Isso vai popular sua base local com 18 atas, PDIs e XP para outros líderes. Deseja continuar?");
-    if (!confirma) return;
+  // --- FUNÇÕES DE INJEÇÃO (SEPARADAS DA CONFIRMAÇÃO) ---
+  const executarInjetarMocks = () => {
+    setModalConfirm({ ...modalConfirm, visivel: false }); // Fecha o modal
 
     // 1. Populando o Ranking (XP dos Líderes)
     const rankingMock = {
@@ -52,11 +64,11 @@ export default function About() {
     });
     localStorage.setItem('@clearit-atas-squad', JSON.stringify(atasMock));
 
-    // 3. Populando PDIs e Tasks
+    // 3. Populando PDIs e Tasks (🔥 FORMATO DO FRAMEWORK)
     const pdisMock = [
-      { id: 'pdimock_1', idLiderado: '1', acao: 'Certificação AWS Cloud Practitioner', prazo: 'Q4 2026', status: 'Em andamento' },
-      { id: 'pdimock_2', idLiderado: '2', acao: 'Mentoria de Arquitetura Limpa', prazo: 'Q3 2026', status: 'Concluído' },
-      { id: 'pdimock_3', idLiderado: '3', acao: 'Curso de Liderança e Comunicação', prazo: 'Q1 2027', status: 'No prazo' }
+      { id: 'pdimock_1', idLiderado: '1', acao: 'Certificação AWS Cloud Practitioner', prazo: '3 meses', prazoDisplay: '3 meses (Out/2026)', status: 'Em andamento' },
+      { id: 'pdimock_2', idLiderado: '2', acao: 'Mentoria de Arquitetura Limpa', prazo: '1 mês', prazoDisplay: '1 mês (Ago/2026)', status: 'Concluído' },
+      { id: 'pdimock_3', idLiderado: '3', acao: 'Curso de Liderança e Comunicação', prazo: '6 meses', prazoDisplay: '6 meses (Jan/2027)', status: 'No prazo' }
     ];
     localStorage.setItem('@clearit-pdi', JSON.stringify(pdisMock));
 
@@ -70,12 +82,11 @@ export default function About() {
     localStorage.setItem('@clearit-deleted-tasks', JSON.stringify([]));
     localStorage.setItem('@clearit-deleted-pdi', JSON.stringify([]));
 
-    mostrarToast("✅ 18 Logs injetados com sucesso! Recarregando sistema...");
+    mostrarBalao("18 Logs injetados com sucesso! Recarregando sistema...", "sucesso");
   };
 
-  const handleLimparBase = () => {
-    const confirma = window.confirm("🚨 ATENÇÃO: Isso vai APAGAR TODAS as suas atas, PDIs e XP salvos no navegador. Tem certeza absoluta?");
-    if (!confirma) return;
+  const executarLimparBase = () => {
+    setModalConfirm({ ...modalConfirm, visivel: false }); // Fecha o modal
 
     localStorage.removeItem('@clearit-ranking');
     localStorage.removeItem('@clearit-atas-squad');
@@ -86,7 +97,30 @@ export default function About() {
     localStorage.removeItem('@clearit-deleted-tasks');
     localStorage.removeItem('@clearit-deleted-pdi');
 
-    mostrarToast("🗑️ Base de dados limpa! Recarregando sistema...");
+    mostrarBalao("Base de dados totalmente limpa! Recarregando...", "alerta");
+  };
+
+  // --- DISPARADORES DE MODAL ---
+  const handleInjetarMocks = () => {
+    setModalConfirm({
+      visivel: true,
+      titulo: 'Injetar Dados Demo',
+      mensagem: 'Isso vai popular sua base local com 18 atas, PDIs e XP para outros líderes. Deseja continuar?',
+      textoBotao: 'Injetar Dados',
+      corBotao: 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20',
+      acaoConfirmar: executarInjetarMocks
+    });
+  };
+
+  const handleLimparBase = () => {
+    setModalConfirm({
+      visivel: true,
+      titulo: 'Resetar Ambiente (Danger Zone)',
+      mensagem: 'Isso vai APAGAR TODAS as suas atas, PDIs e XP salvos no navegador. Tem certeza absoluta?',
+      textoBotao: 'Sim, Limpar Tudo',
+      corBotao: 'bg-red-600 hover:bg-red-700 shadow-red-600/20',
+      acaoConfirmar: executarLimparBase
+    });
   };
 
   return (
@@ -123,7 +157,7 @@ export default function About() {
       {abaInterna === 'projeto' && (
         <div className="space-y-8 animate-[fadeIn_0.3s_ease-out]">
           
-          {/* Apresentação (Seu código) */}
+          {/* Apresentação */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 shadow-sm border border-slate-200 dark:border-slate-800">
             <div className="mb-10 text-center">
               <Rocket className="w-12 h-12 text-blue-600 mx-auto mb-4" />
@@ -237,12 +271,67 @@ export default function About() {
           <Equipe />
         </div>
       )}
+
+      {/* 🔥 MODAL DE CONFIRMAÇÃO (Substitui o window.confirm) */}
+      {modalConfirm.visivel && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" 
+            onClick={() => setModalConfirm({ ...modalConfirm, visivel: false })}
+          ></div>
+          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden animate-[fadeIn_0.2s_ease-out] border border-slate-200 dark:border-slate-800 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              {modalConfirm.corBotao.includes('red') ? (
+                <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-full text-red-600 dark:text-red-400">
+                  <AlertTriangle className="w-6 h-6" />
+                </div>
+              ) : (
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-full text-blue-600 dark:text-blue-400">
+                  <Database className="w-6 h-6" />
+                </div>
+              )}
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                {modalConfirm.titulo}
+              </h3>
+            </div>
+            
+            <p className="text-slate-600 dark:text-slate-300 text-sm mb-8 leading-relaxed">
+              {modalConfirm.mensagem}
+            </p>
+            
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setModalConfirm({ ...modalConfirm, visivel: false })}
+                className="px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 rounded-xl transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={modalConfirm.acaoConfirmar}
+                className={`px-5 py-2.5 text-sm font-bold text-white rounded-xl transition-all shadow-sm ${modalConfirm.corBotao}`}
+              >
+                {modalConfirm.textoBotao}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
-      {/* TOAST NOTIFICATION */}
-      {toast.visivel && (
-        <div className="fixed bottom-8 right-8 z-50 flex items-center gap-3 bg-slate-800 text-white px-6 py-4 rounded-xl shadow-2xl animate-[fadeIn_0.3s_ease-out]">
-          <CheckCircle2 className="w-6 h-6 text-emerald-400 flex-shrink-0" />
-          <span className="font-semibold">{toast.mensagem}</span>
+      {/* BALÃOZINHO DE AVISO PREMIUM (TOAST FLUTUANTE) */}
+      {balaoAviso.visivel && (
+        <div className="fixed bottom-6 right-6 z-[200] max-w-md bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-5 py-4 rounded-2xl shadow-2xl border border-slate-700 dark:border-slate-200 flex items-center gap-3 animate-[slideIn_0.3s_ease-out]">
+          {balaoAviso.tipo === 'sucesso' ? (
+            <CheckCircle2 className="w-6 h-6 text-emerald-400 dark:text-emerald-500 flex-shrink-0" />
+          ) : (
+            <AlertTriangle className="w-6 h-6 text-red-400 dark:text-red-500 flex-shrink-0" />
+          )}
+          <p className="text-sm font-semibold pr-2">{balaoAviso.mensagem}</p>
+          <button 
+            onClick={() => setBalaoAviso({ visivel: false, mensagem: '', tipo: 'sucesso' })}
+            className="p-1 hover:bg-slate-800 dark:hover:bg-slate-100 rounded-lg transition-colors ml-auto text-slate-400 hover:text-white dark:text-slate-500 dark:hover:text-slate-900"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 

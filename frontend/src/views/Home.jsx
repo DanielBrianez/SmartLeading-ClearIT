@@ -1,443 +1,397 @@
 // src/views/Home.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  Bot, Send, FileText, Download, Loader2, 
-  User, CheckCircle2, AlertCircle, Briefcase, Clock, Eye, EyeOff
+  Zap, Calendar, AlertCircle, ArrowRight, 
+  Activity, Target, FileText, Clock, CheckCircle2 
 } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import html2pdf from 'html2pdf.js';
 import { DB_SQUADS } from '../dados';
+import { lerLGPD } from '../utils/security';
 
-export default function Home({ lideradoPreSelecionado }) { 
+export default function Home({ setAbaAtiva }) {
+  const [saudacao, setSaudacao] = useState('Olá');
+  // 🔥 CORREÇÃO: Adicionei "membros" aqui no estado!
+  const [metricas, setMetricas] = useState({ xp: 0, atas: 0, pdis: 0, tasksConcluidas: 0, membros: 0 });
+  const [proximasReunioes, setProximasReunioes] = useState([]);
+  const [radarAtencao, setRadarAtencao] = useState([]);
+
   const idLiderLogado = "daniel_nascimento";
-  const nomeLiderLogado = "DANIEL NASCIMENTO DOS SANTOS FILHO";
-  
-  const meuSquad = DB_SQUADS[idLiderLogado] || [];
 
-  const [lideradoSelecionado, setLideradoSelecionado] = useState(null);
-  const [senioridade, setSenioridade] = useState('');
-  const [tempoCasa, setTempoCasa] = useState('');
-  const [perfilLider, setPerfilLider] = useState('');
-  const [perfilLiderado, setPerfilLiderado] = useState('');
-  const [entregas, setEntregas] = useState('');
-  
-  const [loading, setLoading] = useState(false);
-  const [resultado, setResultado] = useState('');
-  const [erro, setErro] = useState('');
-  const [toast, setToast] = useState({ visivel: false, mensagem: '' });
-  const [abaDocumento, setAbaDocumento] = useState('roteiro');
-
-  // MÁGICA: Escuta se alguém mandou planejar direto da aba de Próximas Reuniões
-  React.useEffect(() => {
-    if (lideradoPreSelecionado && meuSquad.length > 0) {
-      const liderado = meuSquad.find(m => m.id.toString() === lideradoPreSelecionado.toString());
-      if (liderado) {
-        setLideradoSelecionado(liderado);
-        setSenioridade(liderado.senioridade);
-        setTempoCasa(liderado.tempoCasa);
-      }
-    }
-  }, [lideradoPreSelecionado, meuSquad]);
-
-  const mostrarToast = (mensagem) => {
-    setToast({ visivel: true, mensagem });
-    setTimeout(() => {
-      setToast({ visivel: false, mensagem: '' });
-    }, 4000);
-  };
-
-  const handleLideradoChange = (e) => {
-    const id = e.target.value;
-    if (!id) {
-      setLideradoSelecionado(null);
-      setSenioridade('');
-      setTempoCasa('');
-      return;
-    }
-    const liderado = meuSquad.find(m => m.id.toString() === id);
-    setLideradoSelecionado(liderado);
-    setSenioridade(liderado.senioridade);
-    setTempoCasa(liderado.tempoCasa);
-  };
-
-  const handleGerar = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setErro('');
-    setResultado('');
-
-    if (!lideradoSelecionado) {
-      setErro('Por favor, selecione um liderado do seu Squad.');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const response = await fetch('http://localhost:8000/api/gerar-roteiro', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          perfil_lideranca: perfilLider,
-          senioridade_liderado: senioridade,
-          tempo_casa: tempoCasa,
-          perfil_comportamental: perfilLiderado,
-          resumo_entregas: entregas
-        })
-      });
-
-      if (!response.ok) throw new Error('Erro ao conectar com a inteligência artificial.');
-      
-      const data = await response.json();
-      setResultado(data.roteiro);
-      setAbaDocumento('roteiro'); 
-    } catch (err) {
-      setErro(err.message || 'Erro inesperado ao gerar roteiro.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDownloadPDF = async () => {
-    if (!lideradoSelecionado) {
-      mostrarToast("Erro de segurança: Liderado não identificado.");
-      return;
-    }
-
-    const elemento = document.getElementById('conteudo-ata');
-    const opt = {
-      margin: 15,
-      filename: `Ata_1a1_${lideradoSelecionado.nome.replace(' ', '_')}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    html2pdf().set(opt).from(elemento).save();
+  useEffect(() => {
+    const hora = new Date().getHours();
+    if (hora < 12) setSaudacao('Bom dia');
+    else if (hora < 18) setSaudacao('Boa tarde');
+    else setSaudacao('Boa noite');
 
     const rankingSalvo = JSON.parse(localStorage.getItem('@clearit-ranking')) || {};
-    const xpAtual = rankingSalvo[idLiderLogado] || 0;
-    rankingSalvo[idLiderLogado] = xpAtual + 100;
-    localStorage.setItem('@clearit-ranking', JSON.stringify(rankingSalvo));
+    const reunioesAdiadas = JSON.parse(localStorage.getItem('@clearit-reunioes-adiadas')) || {};
+    const atasSalvas = lerLGPD('@clearit-atas-squad') || [];
+    const pdisSalvos = lerLGPD('@clearit-pdi') || [];
+    const pdisDeletados = lerLGPD('@clearit-deleted-pdi') || [];
+    const tasksSalvas = lerLGPD('@clearit-tasks') || [];
+    const tasksDeletadas = lerLGPD('@clearit-deleted-tasks') || [];
+
+    const meuTimeBase = DB_SQUADS[idLiderLogado] || [];
+    const xpGanho = rankingSalvo[idLiderLogado] || 0;
     
-    const novaNotificacao = {
-      id: Date.now(),
-      titulo: 'Você ganhou +100 XP! ⚡',
-      mensagem: `Ata oficial gerada para ${lideradoSelecionado.nome}.`,
-      tempo: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-      lida: false
-    };
+    let totalPdisAtivos = 0;
+    let totalTasksConcluidas = 0;
+    let alertas = [];
     
-    const notsSalvas = JSON.parse(localStorage.getItem('@clearit-notificacoes')) || [];
-    notsSalvas.unshift(novaNotificacao);
-    localStorage.setItem('@clearit-notificacoes', JSON.stringify(notsSalvas));
-    window.dispatchEvent(new Event('notificacao-atualizada'));
+    const hojeTsZero = new Date().setHours(0,0,0,0);
 
-    const partesTexto = resultado.split(/--- ATA OFICIAL ---|- ATA OFICIAL -|ATA OFICIAL/);
-    const ataParaRH = partesTexto.length > 1 ? partesTexto[1].trim() : resultado;
+    meuTimeBase.forEach(membro => {
+      // --- CÁLCULO DE PDIs ---
+      const pdiBase = [
+        { id: `estatico_pdi_1_${membro.id}`, acao: 'Certificação Técnica Relevante', status: 'Em andamento' },
+        { id: `estatico_pdi_2_${membro.id}`, acao: 'Mentoria com Tech Lead', status: 'No prazo' }
+      ];
+      const pdiSalvosDoMembro = pdisSalvos.filter(p => p.idLiderado === membro.id.toString());
+      const savedPdiMap = new Map(pdiSalvosDoMembro.map(p => [p.id, p]));
+      
+      let pdiCombinados = [
+        ...pdiBase.map(p => savedPdiMap.has(p.id) ? savedPdiMap.get(p.id) : p),
+        ...pdiSalvosDoMembro.filter(p => !pdiBase.find(bp => bp.id === p.id))
+      ];
+      
+      const pdisAtivosDesteMembro = pdiCombinados.filter(p => !pdisDeletados.includes(p.id) && p.status !== 'Concluído');
+      totalPdisAtivos += pdisAtivosDesteMembro.length;
 
-    const atasSalvas = JSON.parse(localStorage.getItem('@clearit-atas-squad')) || [];
-    const novaAta = {
-      idAta: Date.now(),
-      idLiderado: lideradoSelecionado.id.toString(),
-      nomeLiderado: lideradoSelecionado.nome,
-      cargo: lideradoSelecionado.cargo,
-      senioridade: senioridade,
-      tempoCasa: tempoCasa,
-      data: new Date().toLocaleDateString('pt-BR'),
-      conteudoRH: ataParaRH
-    };
-    atasSalvas.unshift(novaAta); 
-    localStorage.setItem('@clearit-atas-squad', JSON.stringify(atasSalvas));
+      pdisAtivosDesteMembro.forEach(pdi => {
+        const statusPdi = pdi.status ? pdi.status.toLowerCase() : '';
+        const isStatusExpirado = statusPdi === 'expirado' || statusPdi === 'atrasado';
+        const isTempoExpirado = pdi.dataExpiracaoTs && pdi.dataExpiracaoTs < hojeTsZero;
 
-    mostrarToast('✅ Ata baixada com sucesso e 100 XP creditados!');
-
-    try {
-      await fetch('http://localhost:8000/api/registrar-download', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          lider: nomeLiderLogado,
-          senioridade: senioridade,
-          perfil_comportamental: perfilLiderado
-        })
+        if ((isStatusExpirado || isTempoExpirado) && statusPdi !== 'concluído' && statusPdi !== 'concluido') {
+          alertas.push({
+            id: pdi.id,
+            tipo: 'pdi',
+            mensagem: `PDI Expirado: ${membro.nome}`,
+            detalhe: pdi.acao || 'Ação de desenvolvimento',
+            cor: 'red'
+          });
+        }
       });
-    } catch (e) {
-      console.log('Aviso: Log de auditoria falhou, mas PDF gerado.', e);
+
+      // --- CÁLCULO DE TASKS ---
+      const tasksBase = membro.tarefas || [];
+      const tasksSalvasDoMembro = tasksSalvas.filter(t => t.idLiderado === membro.id.toString());
+      const savedTasksMap = new Map(tasksSalvasDoMembro.map(t => [t.id, t]));
+      
+      let tasksCombinadas = [
+        ...tasksBase.map(t => savedTasksMap.has(t.id) ? savedTasksMap.get(t.id) : t),
+        ...tasksSalvasDoMembro.filter(t => !tasksBase.find(bt => bt.id === t.id))
+      ];
+      
+      const tasksAtivasDesteMembro = tasksCombinadas.filter(t => !tasksDeletadas.includes(t.id));
+      const tasksConcluidasDesteMembro = tasksAtivasDesteMembro.filter(t => t.status.toLowerCase() === 'concluida');
+      totalTasksConcluidas += tasksConcluidasDesteMembro.length;
+
+      tasksAtivasDesteMembro.forEach(task => {
+        const statusTask = task.status ? task.status.toLowerCase() : '';
+        const isStatusExpirada = statusTask === 'expirada' || statusTask === 'atrasada';
+        let isTempoExpirada = false;
+        
+        if (task.ddl && statusTask !== 'concluida') {
+          const taskTs = new Date(`${task.ddl}T00:00:00`).getTime();
+          if (taskTs < hojeTsZero) isTempoExpirada = true;
+        }
+
+        if ((isStatusExpirada || isTempoExpirada) && statusTask !== 'concluida') {
+          alertas.push({
+            id: `task_exp_${task.id}`,
+            tipo: 'task',
+            mensagem: `Acordo Atrasado: ${membro.nome}`,
+            detalhe: task.nome || 'Tarefa sem nome',
+            cor: 'red'
+          });
+        }
+      });
+    });
+
+    setMetricas({
+      xp: xpGanho,
+      atas: atasSalvas.length,
+      pdis: totalPdisAtivos,
+      tasksConcluidas: totalTasksConcluidas,
+      membros: meuTimeBase.length // 🔥 CORREÇÃO: Agora puxa o tamanho real do array!
+    });
+
+    // --- CÁLCULO DE PRÓXIMAS REUNIÕES ---
+    const reunioesCalculadas = meuTimeBase.map(membro => {
+      const idStr = membro.id.toString();
+      const atasDoMembro = atasSalvas.filter(a => a.idLiderado === idStr);
+      let dataProximaObj;
+
+      if (reunioesAdiadas[idStr]) {
+        dataProximaObj = new Date(`${reunioesAdiadas[idStr]}T00:00:00`);
+      } else {
+        let dataUltima = membro.ultimaReuniao;
+        if (atasDoMembro.length > 0) {
+          const dataBR = atasDoMembro[0].data; 
+          const partes = dataBR.split('/');
+          if(partes.length === 3) {
+            dataUltima = `${partes[2]}-${partes[1]}-${partes[0]}`;
+          }
+        }
+        dataProximaObj = new Date(`${dataUltima}T00:00:00`);
+        dataProximaObj.setDate(dataProximaObj.getDate() + 15);
+      }
+
+      const proximaTsZero = dataProximaObj.getTime();
+      const diasFaltando = Math.round((proximaTsZero - hojeTsZero) / (1000 * 60 * 60 * 24));
+
+      return { ...membro, dataProxima: dataProximaObj, diasFaltando };
+    });
+
+    reunioesCalculadas.sort((a, b) => a.diasFaltando - b.diasFaltando);
+    setProximasReunioes(reunioesCalculadas.slice(0, 3));
+
+    reunioesCalculadas.forEach(reuniao => {
+      if (reuniao.diasFaltando < 0) {
+        const textoAtraso = reuniao.diasFaltando === -1 ? 'Ontem' : `Há ${Math.abs(reuniao.diasFaltando)} dias`;
+        alertas.push({
+          id: `atraso_${reuniao.id}`,
+          tipo: 'reuniao',
+          mensagem: `1:1 Atrasada (${textoAtraso})`,
+          detalhe: `Agende com ${reuniao.nome} urgente.`,
+          cor: 'amber'
+        });
+      }
+    });
+
+    setRadarAtencao(alertas);
+  }, []);
+
+  const handleIrParaSquad = () => {
+    if (setAbaAtiva) setAbaAtiva('Meu squad');
+  };
+
+  const handleIniciar1a1 = (idLiderado) => {
+    lerLGPD('@clearit-liderado-foco', idLiderado);
+    if (setAbaAtiva) setAbaAtiva('1a1'); 
+  };
+
+  const renderStatus = (diasFaltando) => {
+    if (diasFaltando === 0) {
+      return (
+        <span className="inline-flex items-center gap-1 text-sm font-bold text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-2.5 py-1 rounded-lg">
+          <Clock className="w-4 h-4" /> Hoje
+        </span>
+      );
+    } else if (diasFaltando === 1) {
+      return (
+        <span className="inline-flex items-center gap-1 text-sm font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-2.5 py-1 rounded-lg">
+          <Clock className="w-4 h-4" /> Amanhã
+        </span>
+      );
+    } else if (diasFaltando > 1 && diasFaltando <= 5) {
+      return (
+        <span className="inline-flex items-center gap-1 text-sm font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-2.5 py-1 rounded-lg">
+          <Clock className="w-4 h-4" /> Em {diasFaltando} dias
+        </span>
+      );
+    } else if (diasFaltando > 5) {
+      return (
+        <span className="inline-flex items-center gap-1 text-sm font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 px-2.5 py-1 rounded-lg">
+          <CheckCircle2 className="w-4 h-4" /> No prazo
+        </span>
+      );
+    } else if (diasFaltando === -1) {
+      return (
+        <span className="inline-flex items-center gap-1 text-sm font-bold text-red-600 bg-red-50 dark:bg-red-900/20 px-2.5 py-1 rounded-lg">
+          <AlertCircle className="w-4 h-4" /> Ontem
+        </span>
+      );
+    } else {
+      return (
+        <span className="inline-flex items-center gap-1 text-sm font-bold text-red-600 bg-red-50 dark:bg-red-900/20 px-2.5 py-1 rounded-lg">
+          <AlertCircle className="w-4 h-4" /> Há {Math.abs(diasFaltando)} dias
+        </span>
+      );
     }
   };
 
-  const partesTexto = resultado.split(/--- ATA OFICIAL ---|- ATA OFICIAL -|ATA OFICIAL/);
-  const roteiroConfidencial = partesTexto.length > 1 ? partesTexto[0].trim() : 'Roteiro em processamento...';
-  const ataParaRH = partesTexto.length > 1 ? partesTexto[1].trim() : resultado;
-
   return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-10 animate-[fadeIn_0.4s_ease-out]">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-          <Bot className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-          Gerador de Roteiro Inteligente
-        </h1>
-        <p className="text-slate-600 dark:text-slate-400 mt-1">
-          Prepare pautas altamente personalizadas utilizando inteligência artificial.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+    <div className="max-w-6xl mx-auto animate-[fadeIn_0.4s_ease-out] pb-10">
+      
+      {/* 🚀 HERO SECTION (Saudação e XP) */}
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl p-8 md:p-10 shadow-lg text-white mb-8 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2"></div>
         
-        {/* === LADO ESQUERDO: CONTROLES === */}
-        <div className="space-y-6">
-          
-          {/* Autenticação */}
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-4 flex items-center gap-2">
-              <User className="w-4 h-4" /> Autenticação e Vínculo
-            </h2>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Líder Responsável</label>
-                <div className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-600 dark:text-slate-400 font-semibold flex items-center gap-2 cursor-not-allowed">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                  {nomeLiderLogado}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Selecione o Liderado</label>
-                <select 
-                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                  onChange={handleLideradoChange}
-                  value={lideradoSelecionado ? lideradoSelecionado.id : ''}
-                  disabled={loading}
-                  required
-                >
-                  <option value="">Selecione um membro do seu Squad...</option>
-                  {meuSquad.map(m => (
-                    <option key={m.id} value={m.id}>{m.nome} - {m.cargo}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
+        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-black mb-2 tracking-tight">
+              {saudacao}, Daniel! 👋
+            </h1>
+            <p className="text-blue-100 text-lg max-w-xl">
+              Aqui está o resumo do seu squad hoje. Você tem {proximasReunioes.filter(r => r.diasFaltando <= 5 && r.diasFaltando >= 0).length} reuniões importantes no radar dos próximos dias.
+            </p>
           </div>
 
-          {/* Parâmetros */}
-          <form onSubmit={handleGerar} className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 space-y-4">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-4 flex items-center gap-2">
-              <Bot className="w-4 h-4" /> Parâmetros da Reunião
-            </h2>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Senioridade</label>
-                <div className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-600 dark:text-slate-400 flex items-center gap-2">
-                  <Briefcase className="w-4 h-4 text-slate-400" />
-                  {senioridade || 'Aguardando...'}
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Tempo de Casa</label>
-                <div className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-600 dark:text-slate-400 flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-slate-400" />
-                  {tempoCasa || 'Aguardando...'}
-                </div>
-              </div>
+          <div 
+            onClick={() => setAbaAtiva && setAbaAtiva('ranking')}
+            className="bg-white/20 backdrop-blur-md border border-white/30 p-4 rounded-2xl flex items-center gap-4 cursor-pointer hover:bg-white/30 transition-colors"
+            title="Ir para Liga de Ouro"
+          >
+            <div className="p-3 bg-amber-400 rounded-xl text-amber-900 shadow-inner">
+              <Zap className="w-8 h-8" />
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Seu Perfil (Líder)</label>
-                <select 
-                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm outline-none text-slate-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all" 
-                  value={perfilLider} 
-                  onChange={e => setPerfilLider(e.target.value)} 
-                  disabled={loading}
-                  required
-                >
-                  <option value="">Selecione...</option>
-                  <option value="Técnico">Técnico</option>
-                  <option value="Transição">Em Transição</option>
-                  <option value="Engajado">Engajado</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Momento do Liderado</label>
-                <select 
-                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm outline-none text-slate-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all" 
-                  value={perfilLiderado} 
-                  onChange={e => setPerfilLiderado(e.target.value)} 
-                  disabled={loading}
-                  required
-                >
-                  <option value="">Selecione...</option>
-                  <option value="Motivado e entregando acima do esperado">Alta Performance</option>
-                  <option value="Consistente, mas precisa de novos desafios">Zona de Conforto</option>
-                  <option value="Abaixo do esperado ou desmotivado">Abaixo do Esperado</option>
-                </select>
-              </div>
-            </div>
-
-            {/* 🔥 NUGGET COMPORTAMENTAL DINÂMICO AQUI! 🔥 */}
-            {perfilLider === 'Técnico' && (
-              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl flex items-start gap-3 text-sm text-blue-700 dark:text-blue-300 animate-[fadeIn_0.3s]">
-                <span className="text-lg leading-none">🧠</span>
-                <p className="leading-tight"><strong>Nugget Rápido:</strong> Liderança técnica não é sobre ter todas as respostas, mas fazer as perguntas certas. Foque em ouvir mais e direcionar.</p>
-              </div>
-            )}
-            {perfilLider === 'Transição' && (
-              <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl flex items-start gap-3 text-sm text-amber-700 dark:text-amber-300 animate-[fadeIn_0.3s]">
-                <span className="text-lg leading-none">🌱</span>
-                <p className="leading-tight"><strong>Nugget Rápido:</strong> Conversas difíceis constroem times fortes. Use a escuta ativa e não tenha medo de demonstrar empatia antes de cobrar.</p>
-              </div>
-            )}
-            {perfilLider === 'Engajado' && (
-              <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl flex items-start gap-3 text-sm text-emerald-700 dark:text-emerald-300 animate-[fadeIn_0.3s]">
-                <span className="text-lg leading-none">🚀</span>
-                <p className="leading-tight"><strong>Nugget Rápido:</strong> Seu time confia em você! O desafio de hoje é sair do micro-gerenciamento e focar em desbloquear o caminho para eles.</p>
-              </div>
-            )}
-
             <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1 mt-1">Foco / Entregas Recentes</label>
-              <textarea 
-                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm outline-none text-slate-900 dark:text-white resize-none disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                rows="3"
-                placeholder="Ex: Entregou o projeto X com atraso."
-                value={entregas}
-                onChange={e => setEntregas(e.target.value)}
-                disabled={loading}
-                required
-              />
+              <p className="text-blue-100 text-xs font-bold uppercase tracking-wider mb-0.5">Seu Nível Atual</p>
+              <div className="flex items-baseline gap-1">
+                <span className="text-3xl font-black">{metricas.xp}</span>
+                <span className="text-sm font-semibold text-blue-200">XP</span>
+              </div>
             </div>
-
-            <button 
-              type="submit" 
-              disabled={loading || !lideradoSelecionado}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-2 shadow-sm shadow-blue-600/20"
-            >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-              {loading ? 'Processando com IA...' : 'Gerar Roteiro Estratégico'}
-            </button>
-            {erro && <p className="text-red-500 text-sm mt-2 flex items-center gap-1"><AlertCircle className="w-4 h-4"/>{erro}</p>}
-          </form>
-        </div>
-
-        {/* === LADO DIREITO: RESULTADO (ABAS) === */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col min-h-[600px] overflow-hidden">
-          
-          <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50">
-            <button 
-              disabled={!resultado}
-              onClick={() => setAbaDocumento('roteiro')}
-              className={`flex-1 py-4 text-sm font-bold flex items-center justify-center gap-2 transition-colors ${abaDocumento === 'roteiro' ? 'text-blue-600 border-b-2 border-blue-600 bg-white dark:bg-slate-900' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 disabled:opacity-50'}`}
-            >
-              <EyeOff className="w-4 h-4" /> Roteiro Confidencial
-            </button>
-            <button 
-              disabled={!resultado}
-              onClick={() => setAbaDocumento('ata')}
-              className={`flex-1 py-4 text-sm font-bold flex items-center justify-center gap-2 transition-colors ${abaDocumento === 'ata' ? 'text-emerald-600 border-b-2 border-emerald-600 bg-white dark:bg-slate-900' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 disabled:opacity-50'}`}
-            >
-              <FileText className="w-4 h-4" /> Ata Oficial (RH)
-            </button>
-          </div>
-
-          <div className="flex-1 p-6 relative">
-            {!resultado && !loading && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 opacity-50">
-                <Bot className="w-16 h-16 mb-4" />
-                <p>Preencha os dados e gere o roteiro.</p>
-              </div>
-            )}
-            
-            {loading && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-blue-500">
-                <Loader2 className="w-10 h-10 animate-spin mb-4" />
-                <p className="animate-pulse font-medium">A IA está analisando o perfil...</p>
-              </div>
-            )}
-
-            {/* CONTEÚDO 1: ROTEIRO CONFIDENCIAL */}
-            {resultado && abaDocumento === 'roteiro' && (
-              <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none animate-[fadeIn_0.3s]">
-                <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-800 dark:text-blue-300 p-4 rounded-xl mb-6 flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm m-0"><strong>Atenção Líder:</strong> Este roteiro contém dicas de mentoria baseadas no seu perfil e no momento do seu liderado. Ele <strong>não</strong> aparecerá no PDF final do RH.</p>
-                </div>
-                <ReactMarkdown>{roteiroConfidencial}</ReactMarkdown>
-              </div>
-            )}
-
-            {/* CONTEÚDO 2: ATA OFICIAL (ÁREA DE IMPRESSÃO) */}
-            <div className={`${abaDocumento === 'ata' && resultado ? 'block animate-[fadeIn_0.3s]' : 'hidden'}`}>
-              
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-slate-900 dark:text-white font-bold">Documento Pronto para Assinatura</h3>
-                <button onClick={handleDownloadPDF} className="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold shadow-sm transition-all">
-                  <Download className="w-4 h-4" /> Gerar PDF
-                </button>
-                {/* NOVO BOTÃO: Compartilhamento rápido com Liderado */}
-                <a 
-                  href={`mailto:?subject=Ata da nossa Reunião 1:1&body=Olá! Nossa reunião de 1:1 foi muito produtiva. Estou com os combinados registrados aqui. Por favor, confira as ações do seu PDI no sistema. Um abraço!`}
-                  className="px-6 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl font-bold transition-all shadow-sm flex items-center gap-2"
-                >
-                  📧 Enviar ao Liderado
-               </a>
-              </div>
-
-              <div 
-                id="conteudo-ata" 
-                className="bg-white text-slate-900 p-6 md:p-8 rounded-xl border border-slate-200 shadow-sm"
-              >
-                <div className="mb-8 border-b-2 border-slate-200 pb-6">
-                  <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-4">Ata Oficial de Alinhamento 1:1</h2>
-                  <div className="grid grid-cols-2 gap-y-4 gap-x-8 text-sm">
-                    <div>
-                      <span className="text-slate-500 text-xs font-bold uppercase block mb-1">Líder Conduzindo</span>
-                      <span className="font-semibold text-slate-900">{nomeLiderLogado}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-500 text-xs font-bold uppercase block mb-1">Colaborador</span>
-                      <span className="font-semibold text-slate-900">{lideradoSelecionado?.nome}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-500 text-xs font-bold uppercase block mb-1">Cargo e Nível</span>
-                      <span className="font-semibold text-slate-900">{lideradoSelecionado?.cargo} ({senioridade})</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-500 text-xs font-bold uppercase block mb-1">Tempo de Empresa</span>
-                      <span className="font-semibold text-slate-900">{tempoCasa}</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="prose prose-sm max-w-none prose-slate text-slate-800">
-                  <ReactMarkdown>{ataParaRH}</ReactMarkdown>
-                </div>
-                
-                <div className="mt-16 pt-8 grid grid-cols-2 gap-8 text-center">
-                  <div>
-                    <div className="border-b border-slate-400 w-3/4 mx-auto mb-2"></div>
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Assinatura do Líder</p>
-                  </div>
-                  <div>
-                    <div className="border-b border-slate-400 w-3/4 mx-auto mb-2"></div>
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Assinatura do Liderado</p>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-
           </div>
         </div>
       </div>
 
-      {toast.visivel && (
-        <div className="fixed bottom-8 right-8 z-50 flex items-center gap-3 bg-emerald-500 text-white px-6 py-4 rounded-xl shadow-2xl shadow-emerald-500/30 animate-[fadeIn_0.3s_ease-out]">
-          <CheckCircle2 className="w-6 h-6 flex-shrink-0" />
-          <span className="font-semibold">{toast.mensagem}</span>
+      {/* 📊 MINI CARDS (KPIs de Execução) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div 
+          onClick={handleIrParaSquad}
+          className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4 transition-transform hover:-translate-y-1 cursor-pointer"
+        >
+          <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-xl text-blue-600 dark:text-blue-400"><Activity className="w-6 h-6" /></div>
+          <div>
+            <p className="text-xs font-bold text-slate-500 uppercase">Squad</p>
+            {/* 🔥 CORREÇÃO: Variável dinâmica + pluralização */}
+            <p className="text-xl font-black text-slate-900 dark:text-white">
+              {metricas.membros} Membro{metricas.membros !== 1 ? 's' : ''}
+            </p>
+          </div>
         </div>
-      )}
+
+        <div 
+          onClick={() => setAbaAtiva && setAbaAtiva('1a1')}
+          className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4 transition-transform hover:-translate-y-1 cursor-pointer"
+        >
+          <div className="p-3 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl text-emerald-600 dark:text-emerald-400"><FileText className="w-6 h-6" /></div>
+          <div>
+            <p className="text-xs font-bold text-slate-500 uppercase">Atas Geradas</p>
+            <p className="text-xl font-black text-slate-900 dark:text-white">{metricas.atas}</p>
+          </div>
+        </div>
+
+        <div 
+          onClick={handleIrParaSquad}
+          className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4 transition-transform hover:-translate-y-1 cursor-pointer"
+        >
+          <div className="p-3 bg-amber-50 dark:bg-amber-900/30 rounded-xl text-amber-600 dark:text-amber-400"><Target className="w-6 h-6" /></div>
+          <div>
+            <p className="text-xs font-bold text-slate-500 uppercase">PDIs Ativos</p>
+            <p className="text-xl font-black text-slate-900 dark:text-white">{metricas.pdis}</p>
+          </div>
+        </div>
+
+        <div 
+          onClick={handleIrParaSquad}
+          className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4 transition-transform hover:-translate-y-1 cursor-pointer"
+        >
+          <div className="p-3 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl text-indigo-600 dark:text-indigo-400"><CheckCircle2 className="w-6 h-6" /></div>
+          <div>
+            <p className="text-xs font-bold text-slate-500 uppercase">Missões Feitas</p>
+            <p className="text-xl font-black text-slate-900 dark:text-white">{metricas.tasksConcluidas}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* 🎯 ÁREA PRINCIPAL */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {/* ESQUERDA: Próximos Alinhamentos */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-blue-600" /> Próximos Alinhamentos (1:1)
+            </h2>
+            <button 
+              onClick={handleIrParaSquad}
+              className="text-sm font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors"
+            >
+              Ver Squad <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            {proximasReunioes.map(reuniao => (
+              <div key={reuniao.id} className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 group hover:border-blue-300 dark:hover:border-blue-700 transition-colors">
+                
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold text-lg border border-slate-200 dark:border-slate-700">
+                    {reuniao.nome.charAt(0)}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 dark:text-white text-base">{reuniao.nome}</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{reuniao.cargo}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between md:justify-end gap-6 w-full md:w-auto">
+                  <div className="text-left md:text-right">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Status</p>
+                    {renderStatus(reuniao.diasFaltando)}
+                  </div>
+
+                  <button 
+                    onClick={() => handleIniciar1a1(reuniao.id.toString())}
+                    className="px-5 py-2.5 bg-slate-900 hover:bg-blue-600 dark:bg-white dark:hover:bg-blue-500 text-white dark:text-slate-900 transition-colors text-sm font-bold rounded-xl shadow-sm"
+                  >
+                    Iniciar 1:1
+                  </button>
+                </div>
+
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* DIREITA: Radar de Atenção */}
+        <div>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-6">
+            <Target className="w-5 h-5 text-red-500" /> Radar de Atenção
+          </h2>
+
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-2">
+            {radarAtencao.length === 0 ? (
+              <div className="p-8 text-center text-slate-500">
+                <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto mb-3 opacity-50" />
+                <p className="font-medium">Tudo sob controle!</p>
+                <p className="text-sm">Nenhum PDI, Acordo expirado ou reunião atrasada.</p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[350px] overflow-y-auto pr-1">
+                {radarAtencao.map(alerta => (
+                  <div key={alerta.id} className={`p-4 rounded-xl border ${
+                    alerta.cor === 'red' ? 'bg-red-50 border-red-100 dark:bg-red-900/10 dark:border-red-900/30' : 'bg-amber-50 border-amber-100 dark:bg-amber-900/10 dark:border-amber-900/30'
+                  }`}>
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className={`w-5 h-5 mt-0.5 flex-shrink-0 ${alerta.cor === 'red' ? 'text-red-500' : 'text-amber-500'}`} />
+                      <div>
+                        <h4 className={`text-sm font-bold ${alerta.cor === 'red' ? 'text-red-900 dark:text-red-300' : 'text-amber-900 dark:text-amber-300'}`}>
+                          {alerta.mensagem}
+                        </h4>
+                        <p className={`text-xs mt-1 ${alerta.cor === 'red' ? 'text-red-700 dark:text-red-400' : 'text-amber-700 dark:text-amber-400'}`}>
+                          {alerta.detalhe}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          <div className="mt-6 bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 p-5 rounded-2xl border border-indigo-100 dark:border-indigo-800/30">
+            <h4 className="text-xs font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-2">Insight da Semana</h4>
+            <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
+              "Líderes que concluem PDIs no prazo têm <span className="text-emerald-600 dark:text-emerald-400 font-bold">+40% de retenção</span> na equipe. Fique de olho no seu Radar de Atenção!"
+            </p>
+          </div>
+        </div>
+
+      </div>
     </div>
   );
 }

@@ -2,8 +2,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   BarChart3, TrendingUp, Users, Target, 
-  FileText, Activity, HeartPulse, ShieldCheck, FilterX, MousePointerClick
+  FileText, Activity, HeartPulse, ShieldCheck, FilterX, MousePointerClick, CalendarDays
 } from 'lucide-react';
+import { DB_SQUADS } from '../dados';
+import { lerLGPD } from '../utils/security';
 
 export default function PainelRH() {
   const [metricas, setMetricas] = useState({
@@ -12,26 +14,54 @@ export default function PainelRH() {
     tasksConcluidas: 0
   });
 
-  // Estado mágico do "Power BI": Qual mês está clicado? (null = visão geral)
-  const [mesSelecionado, setMesSelecionado] = useState(null);
+  // ESTADOS DOS FILTROS (DASHBOARD)
+  const [tipoFiltroTempo, setTipoFiltroTempo] = useState('ANO'); // 'ANO', 'SEMESTRE', 'TRIMESTRE'
+  const [subFiltroTempo, setSubFiltroTempo] = useState('1'); // '1','2' para S; '1' a '4' para Q
+  const [mesSelecionado, setMesSelecionado] = useState(null); // Clique direto na barra
   const chartRef = useRef(null);
 
   const carregarDados = () => {
-    const atas = JSON.parse(localStorage.getItem('@clearit-atas-squad')) || [];
-    const pdis = JSON.parse(localStorage.getItem('@clearit-pdi')) || [];
-    const pdisDeletados = JSON.parse(localStorage.getItem('@clearit-deleted-pdi')) || [];
-    const pdisValidos = pdis.filter(p => !pdisDeletados.includes(p.id));
+    const atas = lerLGPD('@clearit-atas-squad') || [];
+    const pdisSalvos = lerLGPD('@clearit-pdi') || [];    
+    const pdisDeletados = lerLGPD('@clearit-deleted-pdi') || [];
+    const tasksSalvas = lerLGPD('@clearit-tasks') || [];
+    const tasksDeletadas = lerLGPD('@clearit-deleted-tasks') || [];
 
-    const tasks = JSON.parse(localStorage.getItem('@clearit-tasks')) || [];
-    const tasksDeletadas = JSON.parse(localStorage.getItem('@clearit-deleted-tasks')) || [];
-    const tasksValidas = tasks.filter(t => !tasksDeletadas.includes(t.id));
+    const meuTime = DB_SQUADS['daniel_nascimento'] || [];
+    let totalPdisAtivos = 0;
+    let totalTasksConcluidas = 0;
 
-    const tasksFeitas = tasksValidas.filter(t => t.status.toLowerCase() === 'concluida').length;
+    meuTime.forEach(membro => {
+      // PDIs
+      const pdiBase = [
+        { id: `estatico_pdi_1_${membro.id}`, status: 'Em andamento' },
+        { id: `estatico_pdi_2_${membro.id}`, status: 'No prazo' }
+      ];
+      const pdiSalvosDoMembro = pdisSalvos.filter(p => p.idLiderado === membro.id.toString());
+      const savedPdiMap = new Map(pdiSalvosDoMembro.map(p => [p.id, p]));
+      let pdiCombinados = [
+        ...pdiBase.map(p => savedPdiMap.has(p.id) ? savedPdiMap.get(p.id) : p),
+        ...pdiSalvosDoMembro.filter(p => !pdiBase.find(bp => bp.id === p.id))
+      ];
+      const pdisAtivosDesteMembro = pdiCombinados.filter(p => !pdisDeletados.includes(p.id) && p.status !== 'Concluído');
+      totalPdisAtivos += pdisAtivosDesteMembro.length;
+
+      // Tasks
+      const tasksBase = membro.tarefas || [];
+      const tasksSalvasDoMembro = tasksSalvas.filter(t => t.idLiderado === membro.id.toString());
+      const savedTasksMap = new Map(tasksSalvasDoMembro.map(t => [t.id, t]));
+      let tasksCombinadas = [
+        ...tasksBase.map(t => savedTasksMap.has(t.id) ? savedTasksMap.get(t.id) : t),
+        ...tasksSalvasDoMembro.filter(t => !tasksBase.find(bt => bt.id === t.id))
+      ];
+      const tasksConcluidasDesteMembro = tasksCombinadas.filter(t => !tasksDeletadas.includes(t.id) && t.status.toLowerCase() === 'concluida');
+      totalTasksConcluidas += tasksConcluidasDesteMembro.length;
+    });
 
     setMetricas({
       atasGeradas: atas.length,
-      pdisAtivos: pdisValidos.length,
-      tasksConcluidas: tasksFeitas
+      pdisAtivos: totalPdisAtivos,
+      tasksConcluidas: totalTasksConcluidas
     });
   };
 
@@ -41,11 +71,30 @@ export default function PainelRH() {
     return () => window.removeEventListener('storage', carregarDados);
   }, []);
 
-  // Clique fora do gráfico para limpar o filtro (Efeito Power BI)
+  // Lógica para mudar a visualização do Dashboard
+  const mudarFiltroPrincipal = (tipo) => {
+    setTipoFiltroTempo(tipo);
+    setMesSelecionado(null); // Reseta a barra selecionada
+    
+    // Auto-seleciona o momento atual pra facilitar a vida do usuário
+    const mesAtual = new Date().getMonth();
+    if (tipo === 'SEMESTRE') {
+      setSubFiltroTempo(mesAtual < 6 ? '1' : '2');
+    } else if (tipo === 'TRIMESTRE') {
+      setSubFiltroTempo(String(Math.floor(mesAtual / 3) + 1));
+    }
+  };
+
+  const mudarSubFiltro = (sub) => {
+    setSubFiltroTempo(sub);
+    setMesSelecionado(null);
+  };
+
+  // Clique fora do gráfico para limpar o filtro de mês
   useEffect(() => {
     function handleClickOutside(event) {
       if (chartRef.current && !chartRef.current.contains(event.target)) {
-        // Se quiser que clique em qualquer lugar da tela limpe o filtro, descomente a linha abaixo:
+        // Opcional: Descomente para clicar fora e limpar seleção da barra
         // setMesSelecionado(null); 
       }
     }
@@ -53,52 +102,85 @@ export default function PainelRH() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Base de Dados Simulada (Mocks) + Seus Dados Reais no Mês Atual (Junho)
-  const historicoMeses = [
-    { nome: 'Jan', atas: 32, pdis: 12, tasks: 45, enps: 71, adocao: 65 },
-    { nome: 'Fev', atas: 45, pdis: 15, tasks: 52, enps: 73, adocao: 68 },
-    { nome: 'Mar', atas: 58, pdis: 18, tasks: 60, enps: 75, adocao: 72 },
-    { nome: 'Abr', atas: 52, pdis: 14, tasks: 55, enps: 74, adocao: 70 },
-    { nome: 'Mai', atas: 70, pdis: 20, tasks: 75, enps: 76, adocao: 78 },
-    { 
-      nome: 'Jun', 
-      atas: 85 + metricas.atasGeradas, 
-      pdis: 22 + metricas.pdisAtivos, 
-      tasks: 80 + metricas.tasksConcluidas, 
-      enps: 78, 
-      adocao: 82 
-    }
+  // 🔥 BASE MOCK DO ANO INTEIRO (Agora com os dados das áreas separados por mês)
+  const baseMock = [
+    { nome: 'Jan', atas: 32, pdis: 12, tasks: 45, enps: 71, adocao: 65, areas: { engenharia: 70, produto: 62, design: 55 } },
+    { nome: 'Fev', atas: 45, pdis: 15, tasks: 52, enps: 73, adocao: 68, areas: { engenharia: 75, produto: 68, design: 58 } },
+    { nome: 'Mar', atas: 58, pdis: 18, tasks: 60, enps: 75, adocao: 72, areas: { engenharia: 80, produto: 72, design: 60 } },
+    { nome: 'Abr', atas: 52, pdis: 14, tasks: 55, enps: 74, adocao: 70, areas: { engenharia: 82, produto: 70, design: 62 } },
+    { nome: 'Mai', atas: 70, pdis: 20, tasks: 75, enps: 76, adocao: 78, areas: { engenharia: 88, produto: 76, design: 65 } },
+    { nome: 'Jun', atas: 85, pdis: 22, tasks: 80, enps: 78, adocao: 82, areas: { engenharia: 92, produto: 80, design: 68 } },
+    { nome: 'Jul', atas: 15, pdis: 5,  tasks: 12, enps: 79, adocao: 85, areas: { engenharia: 94, produto: 82, design: 70 } }, 
+    { nome: 'Ago', atas: 0,  pdis: 0,  tasks: 0,  enps: 0,  adocao: 0,  areas: { engenharia: 0,  produto: 0,  design: 0 } },
+    { nome: 'Set', atas: 0,  pdis: 0,  tasks: 0,  enps: 0,  adocao: 0,  areas: { engenharia: 0,  produto: 0,  design: 0 } },
+    { nome: 'Out', atas: 0,  pdis: 0,  tasks: 0,  enps: 0,  adocao: 0,  areas: { engenharia: 0,  produto: 0,  design: 0 } },
+    { nome: 'Nov', atas: 0,  pdis: 0,  tasks: 0,  enps: 0,  adocao: 0,  areas: { engenharia: 0,  produto: 0,  design: 0 } },
+    { nome: 'Dez', atas: 0,  pdis: 0,  tasks: 0,  enps: 0,  adocao: 0,  areas: { engenharia: 0,  produto: 0,  design: 0 } }
   ];
 
-  // Calculadora da Visão Geral (Soma o semestre inteiro)
-  const visaoGeral = {
-    nome: 'Visão Geral (Semestre)',
+  const mesAtual = new Date().getMonth();
+
+  // 1. Injeta os dados do usuário no mês exato em que estamos hoje
+  const dadosDoAno = baseMock.map((mes, index) => {
+    if (index === mesAtual) {
+      return {
+        ...mes,
+        atas: mes.atas + metricas.atasGeradas,
+        pdis: mes.pdis + metricas.pdisAtivos,
+        tasks: mes.tasks + metricas.tasksConcluidas,
+        enps: mes.enps || 75,
+        adocao: mes.adocao || 70,
+        areas: mes.areas.engenharia > 0 ? mes.areas : { engenharia: 85, produto: 75, design: 65 }
+      };
+    }
+    return mes;
+  });
+
+  // 2. Fatiador de Tempo (O que o usuário vai ver no gráfico)
+  let mesesFiltrados = [];
+  let tituloFiltro = '';
+
+  if (tipoFiltroTempo === 'ANO') {
+    mesesFiltrados = dadosDoAno.slice(0, Math.max(mesAtual + 1, 6)); // Mostra até o presente, garantindo mínimo 1S
+    tituloFiltro = `Ano de ${new Date().getFullYear()}`;
+  } else if (tipoFiltroTempo === 'SEMESTRE') {
+    if (subFiltroTempo === '1') { mesesFiltrados = dadosDoAno.slice(0, 6); tituloFiltro = '1º Semestre (Jan-Jun)'; }
+    else { mesesFiltrados = dadosDoAno.slice(6, 12); tituloFiltro = '2º Semestre (Jul-Dez)'; }
+  } else if (tipoFiltroTempo === 'TRIMESTRE') {
+    if (subFiltroTempo === '1') { mesesFiltrados = dadosDoAno.slice(0, 3); tituloFiltro = 'Q1 (Jan-Mar)'; }
+    else if (subFiltroTempo === '2') { mesesFiltrados = dadosDoAno.slice(3, 6); tituloFiltro = 'Q2 (Abr-Jun)'; }
+    else if (subFiltroTempo === '3') { mesesFiltrados = dadosDoAno.slice(6, 9); tituloFiltro = 'Q3 (Jul-Set)'; }
+    else if (subFiltroTempo === '4') { mesesFiltrados = dadosDoAno.slice(9, 12); tituloFiltro = 'Q4 (Out-Dez)'; }
+  }
+
+  const historicoMeses = mesesFiltrados;
+
+  // 3. Calculadora de Médias para a Visão Geral
+  // (Filtramos meses > 0 pra média não despencar em meses não vividos)
+  const mesesComDados = historicoMeses.filter(m => m.enps > 0);
+  const div = mesesComDados.length || 1;
+
+  const visaoAgrupada = {
+    nome: tituloFiltro,
     atas: historicoMeses.reduce((acc, curr) => acc + curr.atas, 0),
     pdis: historicoMeses.reduce((acc, curr) => acc + curr.pdis, 0),
     tasks: historicoMeses.reduce((acc, curr) => acc + curr.tasks, 0),
-    enps: Math.round(historicoMeses.reduce((acc, curr) => acc + curr.enps, 0) / 6),
-    adocao: Math.round(historicoMeses.reduce((acc, curr) => acc + curr.adocao, 0) / 6),
-  };
-
-  // Se um mês foi clicado, exibe os dados dele. Se não, exibe a Visão Geral.
-  const dadosExibidos = mesSelecionado !== null ? historicoMeses[mesSelecionado] : visaoGeral;
-  
-  // Para o gráfico escalar bonito, precisamos do maior valor de Atas
-  const maiorValorAtas = Math.max(...historicoMeses.map(m => m.atas));
-
-  const handleBarClick = (index) => {
-    // Se clicar na mesma barra que já tá selecionada, ele deseleciona (limpa)
-    if (mesSelecionado === index) {
-      setMesSelecionado(null);
-    } else {
-      setMesSelecionado(index);
+    enps: Math.round(mesesComDados.reduce((acc, curr) => acc + curr.enps, 0) / div),
+    adocao: Math.round(mesesComDados.reduce((acc, curr) => acc + curr.adocao, 0) / div),
+    areas: {
+      engenharia: Math.round(mesesComDados.reduce((acc, curr) => acc + curr.areas.engenharia, 0) / div),
+      produto: Math.round(mesesComDados.reduce((acc, curr) => acc + curr.areas.produto, 0) / div),
+      design: Math.round(mesesComDados.reduce((acc, curr) => acc + curr.areas.design, 0) / div),
     }
   };
+
+  const dadosExibidos = mesSelecionado !== null ? historicoMeses[mesSelecionado] : visaoAgrupada;
+  const maiorValorAtas = Math.max(...historicoMeses.map(m => m.atas), 10);
 
   return (
     <div className="max-w-6xl mx-auto animate-[fadeIn_0.4s_ease-out]">
       
-      {/* Cabeçalho */}
+      {/* Cabeçalho Fixo */}
       <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -106,35 +188,81 @@ export default function PainelRH() {
             People Analytics
           </h2>
           <p className="text-slate-600 dark:text-slate-400 mt-1">
-            Visão gerencial dinâmica. Clique no gráfico para filtrar os dados.
+            Visão gerencial dinâmica. Filtre os períodos abaixo.
           </p>
         </div>
-        <div className="flex flex-col md:flex-row items-end md:items-center gap-3">
-          
-          {/* BOTÃO LIMPAR FILTRO (Só aparece se um mês estiver selecionado) */}
-          {mesSelecionado !== null && (
-            <button 
-              onClick={() => setMesSelecionado(null)}
-              className="flex items-center gap-1.5 bg-slate-800 text-white dark:bg-white dark:text-slate-900 px-4 py-2 rounded-xl shadow-md text-sm font-bold transition-transform hover:scale-105 animate-[fadeIn_0.2s_ease-out]"
-            >
-              <FilterX className="w-4 h-4" />
-              Limpar Filtro ({historicoMeses[mesSelecionado].nome})
-            </button>
-          )}
-
-          <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 px-4 py-2 rounded-xl border border-emerald-200 dark:border-emerald-800 shadow-sm text-sm font-bold">
-            <ShieldCheck className="w-4 h-4" />
-            LGPD Ativa
-          </div>
+        <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 px-4 py-2 rounded-xl border border-emerald-200 dark:border-emerald-800 shadow-sm text-sm font-bold">
+          <ShieldCheck className="w-4 h-4" />
+          LGPD Ativa
         </div>
       </div>
 
-      {/* Título de Contexto Dinâmico */}
-      <h3 className="text-lg font-bold text-slate-700 dark:text-slate-300 mb-4 flex items-center gap-2 transition-all">
-        Exibindo Dados: <span className="text-indigo-600 dark:text-indigo-400">{dadosExibidos.nome}</span>
-      </h3>
+      {/* CONTROLES DE TEMPO (DASHBOARD) */}
+      <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        
+        <div className="flex items-center gap-2 text-slate-400 border-r border-slate-200 dark:border-slate-700 pr-4">
+          <CalendarDays className="w-5 h-5" />
+          <span className="text-sm font-bold">Período:</span>
+        </div>
 
-      {/* 4 Cards Principais de KPI (AGORA 100% DINÂMICOS!) */}
+        {/* Botões Principais (Pills) */}
+        <div className="bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl inline-flex gap-1 self-start">
+          <button 
+            onClick={() => mudarFiltroPrincipal('ANO')} 
+            className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${tipoFiltroTempo === 'ANO' ? 'bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}
+          >
+            Ano Inteiro
+          </button>
+          <button 
+            onClick={() => mudarFiltroPrincipal('SEMESTRE')} 
+            className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${tipoFiltroTempo === 'SEMESTRE' ? 'bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}
+          >
+            Semestre
+          </button>
+          <button 
+            onClick={() => mudarFiltroPrincipal('TRIMESTRE')} 
+            className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${tipoFiltroTempo === 'TRIMESTRE' ? 'bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}
+          >
+            Quarter
+          </button>
+        </div>
+
+        {/* Sub-Filtros Dinâmicos */}
+        {tipoFiltroTempo === 'SEMESTRE' && (
+          <div className="flex gap-2 animate-[fadeIn_0.2s_ease-out]">
+            <button onClick={() => mudarSubFiltro('1')} className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all ${subFiltroTempo === '1' ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-700 dark:text-indigo-300' : 'bg-white border-slate-200 text-slate-500 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-400 hover:bg-slate-50'}`}>S1 (Jan-Jun)</button>
+            <button onClick={() => mudarSubFiltro('2')} className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all ${subFiltroTempo === '2' ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-700 dark:text-indigo-300' : 'bg-white border-slate-200 text-slate-500 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-400 hover:bg-slate-50'}`}>S2 (Jul-Dez)</button>
+          </div>
+        )}
+
+        {tipoFiltroTempo === 'TRIMESTRE' && (
+          <div className="flex gap-2 animate-[fadeIn_0.2s_ease-out] overflow-x-auto hide-scrollbar">
+            {['1', '2', '3', '4'].map(q => (
+              <button key={q} onClick={() => mudarSubFiltro(q)} className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all flex-shrink-0 ${subFiltroTempo === q ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-700 dark:text-indigo-300' : 'bg-white border-slate-200 text-slate-500 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-400 hover:bg-slate-50'}`}>
+                Q{q}
+              </button>
+            ))}
+          </div>
+        )}
+        
+        <div className="flex-1"></div>
+
+        {mesSelecionado !== null ? (
+          <button 
+            onClick={() => setMesSelecionado(null)}
+            className="flex items-center gap-1.5 bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 px-4 py-1.5 rounded-lg shadow-sm text-xs font-bold transition-transform hover:scale-105 animate-[fadeIn_0.2s_ease-out]"
+          >
+            <FilterX className="w-3.5 h-3.5" />
+            Limpar Filtro ({historicoMeses[mesSelecionado].nome})
+          </button>
+        ) : (
+          <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 flex items-center gap-2">
+            Visão: <span className="text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded-md">{dadosExibidos.nome}</span>
+          </h3>
+        )}
+      </div>
+
+      {/* 4 Cards Principais de KPI */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         
         <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-all duration-300 hover:shadow-md">
@@ -142,7 +270,6 @@ export default function PainelRH() {
             <div className="p-3 bg-pink-100 dark:bg-pink-900/30 rounded-xl text-pink-600 dark:text-pink-400">
               <HeartPulse className="w-6 h-6" />
             </div>
-            {/* Um charminho visual: só mostra o "+ pts" se for visão geral ou meses de alta */}
             {dadosExibidos.enps >= 74 && (
               <span className="flex items-center gap-1 text-emerald-500 text-xs font-bold bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 rounded-md animate-[fadeIn_0.3s]">
                 <TrendingUp className="w-3 h-3" /> Alta
@@ -181,10 +308,10 @@ export default function PainelRH() {
             {dadosExibidos.atas}
           </h3>
           <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-            Atas Geradas {mesSelecionado !== null ? `(${historicoMeses[mesSelecionado].nome})` : ''}
+            Atas Geradas
           </p>
           <p className="text-xs text-slate-400 mt-2">
-            {mesSelecionado === 5 || mesSelecionado === null 
+            {mesSelecionado === mesAtual || mesSelecionado === null 
               ? `Inclui suas ${metricas.atasGeradas} atas no mês atual.` 
               : 'Dados consolidados e auditados.'}
           </p>
@@ -200,7 +327,7 @@ export default function PainelRH() {
             {dadosExibidos.pdis}
           </h3>
           <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">PDIs Ativos</p>
-          <p className="text-xs text-emerald-500 font-medium mt-2">{dadosExibidos.tasks} passos concluídos com sucesso</p>
+          <p className="text-xs text-emerald-500 font-medium mt-2">{dadosExibidos.tasks} tarefas concluídas pela base</p>
         </div>
 
       </div>
@@ -226,19 +353,16 @@ export default function PainelRH() {
           <div className="flex items-end justify-between h-48 gap-2 mb-4 mt-8">
             {historicoMeses.map((mes, index) => {
               const altura = (mes.atas / maiorValorAtas) * 100;
-              
-              // Lógica de visual do Power BI (opacidade cai pros não-selecionados)
               const isSelected = mesSelecionado === index;
               const isDimmed = mesSelecionado !== null && !isSelected;
               
               return (
                 <div 
                   key={index} 
-                  onClick={() => handleBarClick(index)}
+                  onClick={() => setMesSelecionado(mesSelecionado === index ? null : index)}
                   className={`flex flex-col items-center flex-1 group h-full cursor-pointer transition-opacity duration-300 ${isDimmed ? 'opacity-40 hover:opacity-70' : 'opacity-100'}`}
                 >
                   <div className="w-full relative flex justify-center items-end h-full">
-                    {/* Tooltip */}
                     <span className={`absolute -top-8 text-xs font-bold transition-all duration-200 ${isSelected ? 'opacity-100 text-indigo-600 dark:text-indigo-400 scale-110' : 'opacity-0 group-hover:opacity-100 text-slate-600 dark:text-slate-300'}`}>
                       {mes.atas}
                     </span>
@@ -261,7 +385,7 @@ export default function PainelRH() {
           </div>
         </div>
 
-        {/* BARRAS DE PROGRESSO (Adesão por Área) */}
+        {/* BARRAS DE PROGRESSO */}
         <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <h3 className="text-base font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
             <Target className="w-5 h-5 text-blue-500" />
@@ -272,35 +396,35 @@ export default function PainelRH() {
             <div>
               <div className="flex justify-between text-sm font-semibold mb-2">
                 <span className="text-slate-800 dark:text-slate-200">Engenharia e Tech</span>
-                <span className="text-emerald-500">92%</span>
+                <span className="text-emerald-500">{dadosExibidos.areas?.engenharia || 0}%</span>
               </div>
               <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2">
-                <div className="bg-emerald-500 h-2 rounded-full" style={{ width: '92%' }}></div>
+                <div className="bg-emerald-500 h-2 rounded-full transition-all duration-1000 ease-out" style={{ width: `${dadosExibidos.areas?.engenharia || 0}%` }}></div>
               </div>
             </div>
 
             <div>
               <div className="flex justify-between text-sm font-semibold mb-2">
                 <span className="text-slate-800 dark:text-slate-200">Produto (PMs e POs)</span>
-                <span className="text-blue-500">75%</span>
+                <span className="text-blue-500">{dadosExibidos.areas?.produto || 0}%</span>
               </div>
               <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2">
-                <div className="bg-blue-500 h-2 rounded-full" style={{ width: '75%' }}></div>
+                <div className="bg-blue-500 h-2 rounded-full transition-all duration-1000 ease-out" style={{ width: `${dadosExibidos.areas?.produto || 0}%` }}></div>
               </div>
             </div>
 
             <div>
               <div className="flex justify-between text-sm font-semibold mb-2">
                 <span className="text-slate-800 dark:text-slate-200">Design e UX</span>
-                <span className="text-amber-500">60%</span>
+                <span className="text-amber-500">{dadosExibidos.areas?.design || 0}%</span>
               </div>
               <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2">
-                <div className="bg-amber-500 h-2 rounded-full" style={{ width: '60%' }}></div>
+                <div className="bg-amber-500 h-2 rounded-full transition-all duration-1000 ease-out" style={{ width: `${dadosExibidos.areas?.design || 0}%` }}></div>
               </div>
             </div>
             
             <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 mt-4 text-sm text-slate-600 dark:text-slate-400">
-              <strong>Insight de IA:</strong> A área de Design apresenta queda de engajamento em PDIs neste trimestre. Recomenda-se um workshop de alinhamento com as lideranças do setor.
+              <strong>Insight de IA:</strong> A área de Design apresenta queda de engajamento em PDIs neste período. Recomenda-se um workshop de alinhamento com as lideranças do setor.
             </div>
           </div>
         </div>

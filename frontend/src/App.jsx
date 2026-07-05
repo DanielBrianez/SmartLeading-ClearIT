@@ -2,14 +2,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Menu, X, Sun, Moon, 
-  User, Calendar, Users, MessageSquare, Settings, LogOut, Trophy, Info, Search, Bell, Zap, BarChart3
+  User, Calendar, Users, MessageSquare, Settings, LogOut, Trophy, Info, Search, Bell, Zap, BarChart3,
+  House
 } from 'lucide-react';
+import { salvarLGPD, lerLGPD } from './utils/security';
 
 import logoImagem from './assets/logo.png';
 import logoBranca from './assets/logo-branco.png';
 import minhaFoto from './assets/daniel-foto.jpg';
 
 import Home from './views/Home';
+import Meus1a1 from './views/Meus1a1';
 import Ranking from './views/Ranking';
 import MeuSquad from './views/MeuSquad';
 import About from './views/About';
@@ -19,16 +22,20 @@ import PainelRH from './views/PainelRH';
 export default function App() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState('1a1');
+  const [activeTab, setActiveTab] = useState('Home');
   
-  // 🔥 ESTADO QUE GUARDA QUEM FOI CLICADO LÁ NA ABA DE REUNIÕES!
+  // 🔥 ESTADOS DO ROTEAMENTO E BUSCA
   const [lideradoParaPlanejar, setLideradoParaPlanejar] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Controles de Dropdown
+  // 🔥 ESTADOS DE MENUS DROPDOWN
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isNotificacoesOpen, setIsNotificacoesOpen] = useState(false);
   const [notificacoes, setNotificacoes] = useState([]);
+
+  // 🔥 ESTADOS DO MEU PERFIL (NOVO)
+  const [modalPerfilOpen, setModalPerfilOpen] = useState(false);
+  const [perfilConfig, setPerfilConfig] = useState(localStorage.getItem('@clearit-perfil-config') || 'Técnico');
 
   const profileMenuRef = useRef(null);
   const notificacoesRef = useRef(null);
@@ -43,7 +50,7 @@ export default function App() {
 
   // Carrega notificações e escuta os eventos do sistema
   const carregarNotificacoes = () => {
-    const salvas = JSON.parse(localStorage.getItem('@clearit-notificacoes')) || [];
+    const salvas = lerLGPD('@clearit-notificacoes') || [];
     setNotificacoes(salvas);
   };
 
@@ -81,14 +88,15 @@ export default function App() {
     if (!isNotificacoesOpen && notificacoesNaoLidas > 0) {
       const atualizadas = notificacoes.map(n => ({ ...n, lida: true }));
       setNotificacoes(atualizadas);
-      localStorage.setItem('@clearit-notificacoes', JSON.stringify(atualizadas));
+      salvarLGPD('@clearit-notificacoes', atualizadas);
     }
   };
 
   const menuItems = [
+    { id: 'Home', label: 'Home', icon: House, status: 'ready' },
     { id: '1a1', label: 'Meus 1:1s', icon: MessageSquare, status: 'ready' },
     { id: 'squad', label: 'Meu Squad', icon: Users, status: 'ready' },
-    { id: 'reunioes', label: 'Próximas Reuniões', icon: Calendar, status: 'ready' }, // <-- Agora está ready!
+    { id: 'reunioes', label: 'Próximas Reuniões', icon: Calendar, status: 'ready' },
     { id: 'ranking', label: 'Liga de Ouro', icon: Trophy, status: 'ready' },
     { id: 'about', label: 'Sobre o Sistema', icon: Info, status: 'ready' },
     { id: 'painel', label: 'Painel do RH', icon: BarChart3, status: 'ready' },
@@ -155,7 +163,7 @@ export default function App() {
             )}
           </div>
           
-          {/* PERFIL (Sem alterações) */}
+          {/* PERFIL */}
           <div className="relative" ref={profileMenuRef}>
             <button onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)} className="focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700">
               <img src={supervisorLogado.foto} alt="Avatar" className="w-10 h-10 object-cover" />
@@ -170,12 +178,24 @@ export default function App() {
                     <p>{supervisorLogado.cargo}</p>
                   </div>
                 </div>
+                
                 <hr className="border-slate-100 dark:border-slate-700 my-1" />
+                
+                {/* 🔥 NOVO BOTÃO: MEU PERFIL */}
+                <button 
+                  onClick={() => { setIsProfileMenuOpen(false); setModalPerfilOpen(true); }}
+                  className="w-full flex items-center gap-3 px-5 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                >
+                  <User className="w-4 h-4" /> Meu Perfil
+                </button>
+
                 <button onClick={() => setIsDarkMode(!isDarkMode)} className="w-full flex items-center gap-3 px-5 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                   {isDarkMode ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4" />} 
                   {isDarkMode ? 'Modo Claro' : 'Modo Escuro'}
                 </button>
+                
                 <hr className="border-slate-100 dark:border-slate-700 my-1" />
+                
                 <button className="w-full flex items-center gap-3 px-5 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                   <LogOut className="w-4 h-4" /> Sair
                 </button>
@@ -226,8 +246,18 @@ export default function App() {
               <p className="text-slate-600 dark:text-slate-400 mt-1">Que bom ver você aqui.</p>
             </div>
 
-            {/* 🔥 AQUI ESTÁ A MÁGICA DO ROTEAMENTO! */}
-            {activeTab === '1a1' && <Home lideradoPreSelecionado={lideradoParaPlanejar} />}
+            {/* ROTEAMENTO */}
+            {activeTab === 'Home' && (
+              <Home 
+                setAbaAtiva={(aba) => {
+                  if (aba === 'Meus1a1' || aba === 'atas' || aba === '1a1') setActiveTab('1a1');
+                  else if (aba === 'Meu squad' || aba === 'squad') setActiveTab('squad');
+                  else setActiveTab(aba);
+                }} 
+              />
+            )}
+            
+            {activeTab === '1a1' && <Meus1a1 lideradoPreSelecionado={lideradoParaPlanejar} />}
             {activeTab === 'squad' && <MeuSquad />}
 
             {activeTab === 'reunioes' && (
@@ -252,6 +282,50 @@ export default function App() {
           </div>
         </main>
       </div>
+
+      {/* 🔥 MODAL DE MEU PERFIL (FLUTUANTE) */}
+      {modalPerfilOpen && (
+        <div className="fixed inset-0 z-[160] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl w-full max-w-sm border border-slate-200 dark:border-slate-800 shadow-2xl animate-[fadeIn_0.2s]">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="font-bold text-lg text-slate-900 dark:text-white flex items-center gap-2">
+                <User className="w-5 h-5 text-blue-600" />
+                Configurar Perfil
+              </h3>
+              <button onClick={() => setModalPerfilOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <label className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">Meu Estilo de Liderança:</label>
+            <select 
+              value={perfilConfig} 
+              onChange={(e) => {
+                setPerfilConfig(e.target.value);
+                localStorage.setItem('@clearit-perfil-config', e.target.value);
+                // 🔥 A MÁGICA: Avisa o sistema inteiro que o perfil mudou na mesma hora!
+                window.dispatchEvent(new Event('perfil-atualizado'));
+              }}
+              className="w-full p-3 bg-slate-50 dark:bg-slate-800 outline-none rounded-xl mb-6 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 transition-shadow"
+            >
+              <option value="Técnico">Técnico</option>
+              <option value="Transição">Em Transição</option>
+              <option value="Engajado">Engajado</option>
+            </select>
+            
+            <button 
+              onClick={() => setModalPerfilOpen(false)} 
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold transition-colors shadow-sm"
+            >
+              Salvar Perfil
+            </button>
+            <p className="text-xs text-slate-500 mt-4 text-center">
+              Esse perfil será carregado automaticamente ao gerar seus roteiros de 1:1.
+            </p>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

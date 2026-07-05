@@ -2,13 +2,14 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, AlertCircle, CheckCircle2, ChevronRight, CalendarClock } from 'lucide-react';
 import { DB_SQUADS } from '../dados';
+import { lerLGPD, salvarLGPD } from '../utils/security';
 
 export default function ProximasReunioes({ onPlanejar }) {
   const idLiderLogado = "daniel_nascimento";
   const meuTimeBase = DB_SQUADS[idLiderLogado] || [];
   
-  const [todasAtas] = useState(JSON.parse(localStorage.getItem('@clearit-atas-squad')) || []);
-  const [adiadas, setAdiadas] = useState(JSON.parse(localStorage.getItem('@clearit-reunioes-adiadas')) || {});
+  const [todasAtas] = useState(lerLGPD('@clearit-atas-squad') || []);
+  const [adiadas, setAdiadas] = useState(lerLGPD('@clearit-reunioes-adiadas') || {});
   
   const [filtroAtivo, setFiltroAtivo] = useState('todas'); // todas, prontas, expiradas, adiadas
   const [reunioes, setReunioes] = useState([]);
@@ -67,7 +68,7 @@ export default function ProximasReunioes({ onPlanejar }) {
     
     const novasAdiadas = { ...adiadas, [membro.id]: `${ano}-${mes}-${dia}` };
     setAdiadas(novasAdiadas);
-    localStorage.setItem('@clearit-reunioes-adiadas', JSON.stringify(novasAdiadas));
+    salvarLGPD('@clearit-reunioes-adiadas', novasAdiadas);
   };
 
   const handlePlanejarLocal = (membro) => {
@@ -81,7 +82,7 @@ export default function ProximasReunioes({ onPlanejar }) {
       const novasAdiadas = { ...adiadas };
       delete novasAdiadas[membro.id];
       setAdiadas(novasAdiadas);
-      localStorage.setItem('@clearit-reunioes-adiadas', JSON.stringify(novasAdiadas));
+      salvarLGPD('@clearit-reunioes-adiadas', novasAdiadas);
     }
     
     // Grita pro App.jsx trocar de aba e injetar o cara!

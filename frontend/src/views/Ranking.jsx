@@ -1,7 +1,10 @@
 // src/views/Ranking.jsx
 import React, { useState, useEffect } from 'react';
 import { Trophy, Medal, Zap, Filter, Target, FileText, Activity } from 'lucide-react';
-import minhaFoto from '../assets/daniel-foto.jpg'; // Sua foto oficial
+import minhaFoto from '../assets/daniel-foto.jpg'; 
+import { DB_SQUADS } from '../dados'; 
+// 🔥 IMPORTANDO A NOSSA FUNÇÃO DE SEGURANÇA
+import { lerLGPD } from '../utils/security'; 
 
 export default function Ranking() {
   const [lideres, setLideres] = useState([]);
@@ -9,18 +12,47 @@ export default function Ranking() {
 
   useEffect(() => {
     // 1. Abre os cofres do navegador
+    // O XP não identifica nomes de liderados, então não precisa de ofuscação
     const rankingSalvo = JSON.parse(localStorage.getItem('@clearit-ranking')) || {};
-    const atasSalvas = JSON.parse(localStorage.getItem('@clearit-atas-squad')) || [];
-    const pdisSalvos = JSON.parse(localStorage.getItem('@clearit-pdi')) || [];
     
-    // Calcula os dados reais do Daniel (Líder Logado)
+    // 🔥 Os dados confidenciais (Atas e PDIs) agora passam pela nossa lente de segurança!
+    const atasSalvas = lerLGPD('@clearit-atas-squad') || [];
+    const pdisSalvos = lerLGPD('@clearit-pdi') || [];
+    const pdisDeletados = lerLGPD('@clearit-deleted-pdi') || []; 
+    
+    // 2. Calcula os dados reais do Daniel (Líder Logado) com precisão absoluta
     const xpGanho = rankingSalvo['daniel_nascimento'] || 0;
     const atasGeradas = atasSalvas.length;
-    const pdisAtivos = pdisSalvos.length;
-    // Ritos = Atas geradas + 1 (reunião inicial)
-    const ritosRealizados = atasGeradas > 0 ? atasGeradas + 1 : 0;
+    
+    // 🔥 O GRANDE TRUQUE: Contar os PDIs exatamente igual à tela do MeuSquad
+    const meuTime = DB_SQUADS['daniel_nascimento'] || [];
+    let totalPdisAtivos = 0;
 
-    // 2. Base de Competidores (Adicionamos o Daniel aqui pra facilitar o merge)
+    meuTime.forEach(membro => {
+      // Recria os PDIs base do membro
+      const pdiBase = [
+        { id: `estatico_pdi_1_${membro.id}`, status: 'Em andamento' },
+        { id: `estatico_pdi_2_${membro.id}`, status: 'No prazo' }
+      ];
+      
+      const pdiSalvosDoMembro = pdisSalvos.filter(p => p.idLiderado === membro.id.toString());
+      const savedPdiMap = new Map(pdiSalvosDoMembro.map(p => [p.id, p]));
+
+      // Combina a base com os salvos (sobrescrevendo as edições)
+      let pdiCombinados = [
+        ...pdiBase.map(p => savedPdiMap.has(p.id) ? savedPdiMap.get(p.id) : p),
+        ...pdiSalvosDoMembro.filter(p => !pdiBase.find(bp => bp.id === p.id))
+      ];
+
+      // Filtra os que NÃO estão deletados e NÃO estão concluídos
+      const pdisAtivosDesteMembro = pdiCombinados.filter(p => !pdisDeletados.includes(p.id) && p.status !== 'Concluído');
+      totalPdisAtivos += pdisAtivosDesteMembro.length;
+    });
+
+    const pdisAtivos = totalPdisAtivos;
+    const ritosRealizados = atasGeradas + meuTime.length; // Ritos base (Kickoffs) + Novas Atas geradas
+
+    // 3. Base de Competidores
     const baseCompetidores = [
       { id: 'daniel_nascimento', nome: 'Daniel Nascimento', cargo: 'Tech Lead', area: 'Engenharia', foto: minhaFoto, atasBase: 0, pdisBase: 0, ritosBase: 0, xpBase: 0 },
       { id: 'juliana_castro', nome: 'Juliana Castro', cargo: 'Tech Lead', area: 'Produto', atasBase: 12, pdisBase: 4, ritosBase: 15, xpBase: 450 },
@@ -29,11 +61,10 @@ export default function Ranking() {
       { id: 'roberto_alves', nome: 'Roberto Alves', cargo: 'Tech Lead', area: 'Engenharia', atasBase: 15, pdisBase: 5, ritosBase: 18, xpBase: 550 }
     ];
 
-    // 3. Atualiza os dados com base no que está salvo ou simulado
+    // 4. Atualiza os dados mesclando a base simulada com a realidade do Daniel
     let dadosAtualizados = baseCompetidores.map(lider => {
       const isLogado = lider.id === 'daniel_nascimento';
       
-      // O XP tenta pegar do Injetor de Mocks, se não tiver, usa o base
       const xpLocal = rankingSalvo[lider.id];
       const xpTotal = isLogado ? (xpLocal || xpGanho) : (xpLocal || lider.xpBase);
       
@@ -50,15 +81,15 @@ export default function Ranking() {
       };
     });
 
-    // 4. Regra de Ordenação com DESEMPATE POR ATAS (Dor 1)
+    // 5. Regra de Ordenação com DESEMPATE POR ATAS
     dadosAtualizados.sort((a, b) => {
       if (b.xpTotal !== a.xpTotal) {
-        return b.xpTotal - a.xpTotal; // Maior XP primeiro
+        return b.xpTotal - a.xpTotal; 
       }
-      return b.atasTotal - a.atasTotal; // Desempate: Maior taxa de Atas
+      return b.atasTotal - a.atasTotal; 
     });
 
-    // 5. Calculadora de Nível de Maturidade (Dor 1)
+    // 6. Calculadora de Nível de Maturidade
     const calcularMaturidade = (xp, atas) => {
       if (xp >= 800 && atas >= 20) return { nivel: 'Referência', cor: 'text-amber-500', bg: 'bg-amber-100 dark:bg-amber-900/30' };
       if (xp >= 500 && atas >= 10) return { nivel: 'Consistente', cor: 'text-blue-500', bg: 'bg-blue-100 dark:bg-blue-900/30' };
@@ -66,7 +97,7 @@ export default function Ranking() {
       return { nivel: 'Iniciante', cor: 'text-slate-500', bg: 'bg-slate-100 dark:bg-slate-800' };
     };
 
-    // 6. Finalmente cria o array do Ranking aplicando as posições e maturidade
+    // 7. Finalmente cria o array do Ranking aplicando as posições
     const rankingFinal = dadosAtualizados.map((lider, index) => ({
       ...lider,
       posicao: index + 1,
@@ -76,7 +107,6 @@ export default function Ranking() {
     setLideres(rankingFinal);
   }, []);
 
-  // Extrai as áreas únicas para o filtro
   const areasUnicas = ['Todas', ...new Set(lideres.map(l => l.area))];
   const lideresFiltrados = areaFiltro === 'Todas' ? lideres : lideres.filter(l => l.area === areaFiltro);
 
@@ -152,7 +182,6 @@ export default function Ranking() {
                   <h3 className="font-bold text-slate-900 dark:text-white text-lg leading-none">
                     {lider.nome}
                   </h3>
-                  {/* BADGE DE MATURIDADE DINÂMICA */}
                   <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded border ${lider.maturidade.cor} ${lider.maturidade.bg}`}>
                     {lider.maturidade.nivel}
                   </span>
@@ -161,7 +190,7 @@ export default function Ranking() {
                   {lider.cargo} <span className="mx-1">•</span> {lider.area}
                 </p>
                 
-                {/* Títulos / Pódios (Só aparecem se não tiver filtro) */}
+                {/* Títulos / Pódios */}
                 {areaFiltro === 'Todas' && (
                   <div className="flex gap-2">
                     {index === 0 && (
@@ -187,7 +216,6 @@ export default function Ranking() {
             {/* DRIVERS DE MATURIDADE & XP */}
             <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center border-t md:border-t-0 md:border-l border-slate-100 dark:border-slate-800 pt-4 md:pt-0 md:pl-6 mt-2 md:mt-0">
               
-              {/* DRIVERS: Ritos, Atas, PDI */}
               <div className="flex gap-3 text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">
                 <div className="flex items-center gap-1" title="Ritos Realizados">
                   <Activity className="w-3.5 h-3.5" /> {lider.ritosTotal}
@@ -200,7 +228,6 @@ export default function Ranking() {
                 </div>
               </div>
 
-              {/* XP */}
               <div className={`flex items-center gap-1.5 font-bold text-2xl leading-none ${
                 index === 0 && areaFiltro === 'Todas' ? 'text-amber-500' : 'text-blue-600 dark:text-blue-400'
               }`}>

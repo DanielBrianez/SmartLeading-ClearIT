@@ -8,13 +8,14 @@ import {
   CheckCircle2, Circle, AlertCircle, CheckSquare,
   Download, FileText, TrendingUp, Award, Map as MapIcon, Plus, Trash2, Pencil
 } from 'lucide-react';
+import { salvarLGPD, lerLGPD } from '../utils/security';
 import { DB_SQUADS } from '../dados';
 
 export default function MeuSquad() {
   const idLiderLogado = "daniel_nascimento";
   const meuTimeBase = DB_SQUADS[idLiderLogado] || [];
   
-  const todasAtas = JSON.parse(localStorage.getItem('@clearit-atas-squad')) || [];
+  const todasAtas = lerLGPD('@clearit-atas-squad') || [];
   
   const meuTime = meuTimeBase.map(membro => {
     const atasDoMembro = todasAtas.filter(a => a.idLiderado === membro.id.toString());
@@ -30,6 +31,16 @@ export default function MeuSquad() {
     }
     return { ...membro, ultimaReuniao: dataReal };
   });
+
+  // ESTADO: Balãozinho de Aviso
+  const [balaoAviso, setBalaoAviso] = useState({ visivel: false, mensagem: '' });
+
+  const mostrarBalao = (mensagem) => {
+    setBalaoAviso({ visivel: true, mensagem });
+    setTimeout(() => {
+      setBalaoAviso({ visivel: false, mensagem: '' });
+    }, 4000);
+  };
   
   const [lideradoSelecionado, setLideradoSelecionado] = useState(null);
   const [historicoAtas, setHistoricoAtas] = useState([]);
@@ -37,17 +48,17 @@ export default function MeuSquad() {
   const [abaModal, setAbaModal] = useState('visao_geral');
 
   // ESTADOS: Gerenciamento Dinâmico de Tasks e PDI
-  const [tasksSalvas, setTasksSalvas] = useState(JSON.parse(localStorage.getItem('@clearit-tasks')) || []);
+  const [tasksSalvas, setTasksSalvas] = useState(lerLGPD('@clearit-tasks') || []);
   const [formTaskVisible, setFormTaskVisible] = useState(false);
   const [novaTask, setNovaTask] = useState({ nome: '', descricao: '', status: 'pendente', ddl: '' });
 
-  const [pdiSalvos, setPdiSalvos] = useState(JSON.parse(localStorage.getItem('@clearit-pdi')) || []);
+  const pdisSalvos = lerLGPD('@clearit-pdi') || [];
   const [formPDIVisible, setFormPDIVisible] = useState(false);
-  const [novoPDI, setNovoPDI] = useState({ acao: '', prazo: '', status: 'Pendente' });
+  const [novoPDI, setNovoPDI] = useState({ acao: '', prazo: '', status: 'No prazo' });
 
   // ESTADOS: Lixeira Inteligente
-  const [tasksDeletadas, setTasksDeletadas] = useState(JSON.parse(localStorage.getItem('@clearit-deleted-tasks')) || []);
-  const [pdiDeletados, setPdiDeletados] = useState(JSON.parse(localStorage.getItem('@clearit-deleted-pdi')) || []);
+  const [tasksDeletadas, setTasksDeletadas] = useState(lerLGPD('@clearit-deleted-tasks') || []);
+  const [pdiDeletados, setPdiDeletados] = useState(lerLGPD('@clearit-deleted-pdi') || []);
 
   const handleAbrirModal = (membro) => {
     setLideradoSelecionado(membro);
@@ -59,16 +70,59 @@ export default function MeuSquad() {
     setHistoricoAtas(atasDoMembro);
   };
 
+  // 🔥 AGORA COM O JAVASCRIPT NATIVO FUNCIONANDO PERFEITAMENTE
+  const getTasksDoMembro = () => {
+    if (!lideradoSelecionado) return [];
+    const tasksBase = lideradoSelecionado.tarefas || [];
+    const tasksSalvasDoMembro = tasksSalvas.filter(t => t.idLiderado === lideradoSelecionado.id.toString());
+    const savedTasksMap = new Map(tasksSalvasDoMembro.map(t => [t.id, t]));
+    
+    const tasksCombinadas = [
+      ...tasksBase.map(t => savedTasksMap.has(t.id) ? savedTasksMap.get(t.id) : t),
+      ...tasksSalvasDoMembro.filter(t => !tasksBase.find(bt => bt.id === t.id))
+    ];
+    return tasksCombinadas.filter(t => !tasksDeletadas.includes(t.id));
+  };
+
+  const getPdiDoMembro = () => {
+    if (!lideradoSelecionado) return [];
+    const pdiBase = gerarPDI(lideradoSelecionado).planoAcao;
+    const pdiSalvosDoMembro = pdiSalvos.filter(p => p.idLiderado === lideradoSelecionado.id.toString());
+    const savedPdiMap = new Map(pdiSalvosDoMembro.map(p => [p.id, p]));
+
+    let pdiCombinados = [
+      ...pdiBase.map(p => savedPdiMap.has(p.id) ? savedPdiMap.get(p.id) : p),
+      ...pdiSalvosDoMembro.filter(p => !pdiBase.find(bp => bp.id === p.id))
+    ];
+    
+    pdiCombinados = pdiCombinados.filter(p => !pdiDeletados.includes(p.id));
+
+    // 🔥 VIGIA AUTOMÁTICO DE EXPIRAÇÃO
+    const hojeTs = Date.now();
+    return pdiCombinados.map(p => {
+      if (p.dataExpiracaoTs && p.dataExpiracaoTs < hojeTs && p.status !== 'Concluído') {
+        return { ...p, status: 'Expirado' }; 
+      }
+      return p;
+    });
+  };
+
   // FUNÇÕES DE SALVAR / EDITAR TASKS
   const handleSalvarTask = (e) => {
+    e.preventDefault(); 
 
-    const tarefasAtuais = tasks.filter(t => t.idLiderado === idSelecionado && t.status !== 'concluida');
-    if (tarefasAtuais.length >= 3) {
-      alert("⚠️ Limite atingido! O Framework da Clear IT foca no essencial. Não crie mais de 3 metas ativas por vez para este liderado.");
+    // Lê todas as tasks REAIS que estão aparecendo na tela agora
+    const todasTasksDaTela = getTasksDoMembro();
+    
+    // Conta as ativas (ignorando a que estamos editando agora, para evitar duplicação)
+    const outrasAtivas = todasTasksDaTela.filter(t => t.status.toLowerCase() !== 'concluida' && t.id !== novaTask.id);
+    
+    // TRAVA DE OURO: Se já tem 3 ativas E você está tentando salvar essa como pendente/expirada, BARRA!
+    if (outrasAtivas.length >= 3 && novaTask.status.toLowerCase() !== 'concluida') {
+      mostrarBalao("⚠️ Limite atingido! O Framework da Clear IT foca no essencial. Não crie mais de 3 metas ativas por vez.");
       return;
     }
     
-    e.preventDefault();
     let atualizadas = [...tasksSalvas];
 
     if (novaTask.id) {
@@ -84,7 +138,7 @@ export default function MeuSquad() {
     }
 
     setTasksSalvas(atualizadas);
-    localStorage.setItem('@clearit-tasks', JSON.stringify(atualizadas));
+    salvarLGPD('@clearit-tasks', atualizadas);
     setNovaTask({ nome: '', descricao: '', status: 'pendente', ddl: '' });
     setFormTaskVisible(false);
   };
@@ -92,7 +146,38 @@ export default function MeuSquad() {
   // FUNÇÕES DE SALVAR / EDITAR PDI
   const handleSalvarPDI = (e) => {
     e.preventDefault();
+
+    // Lê todos os PDIs REAIS que estão aparecendo na tela agora
+    const todosPDIsDaTela = getPdiDoMembro();
+    
+    // Conta os ativos (ignorando o que estamos editando agora)
+    const outrosPDIsAtivos = todosPDIsDaTela.filter(p => p.status !== 'Concluído' && p.id !== novoPDI.id);
+    
+    // TRAVA DE OURO: Se já tem 3 ativos E você está tentando salvar esse como não concluído, BARRA!
+    if (outrosPDIsAtivos.length >= 3 && novoPDI.status !== 'Concluído') {
+      mostrarBalao("🛑 Limite atingido! O PDI da Clear IT foca no essencial. Conclua uma meta ativa antes de criar o 4º passo.");
+      return;
+    }
+
     let atualizados = [...pdiSalvos];
+
+    // 🔥 CALCULA A DATA FUTURA E O STATUS AUTOMÁTICO
+    const dataCalculo = new Date(); 
+    let mesesParaAdicionar = 0;
+    
+    if (novoPDI.prazo === '1 mês') mesesParaAdicionar = 1;
+    else if (novoPDI.prazo === '2 meses') mesesParaAdicionar = 2;
+    else if (novoPDI.prazo === '3 meses') mesesParaAdicionar = 3;
+    else if (novoPDI.prazo === '6 meses') mesesParaAdicionar = 6;
+
+    if (mesesParaAdicionar > 0) {
+      dataCalculo.setMonth(dataCalculo.getMonth() + mesesParaAdicionar);
+      const nomesMeses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+      novoPDI.dataExpiracaoTs = dataCalculo.getTime(); 
+      novoPDI.prazoDisplay = `${novoPDI.prazo} (${nomesMeses[dataCalculo.getMonth()]}/${dataCalculo.getFullYear()})`;
+    } else {
+      novoPDI.prazoDisplay = novoPDI.prazo; 
+    }
 
     if (novoPDI.id) {
       const index = atualizados.findIndex(p => p.id === novoPDI.id);
@@ -107,8 +192,8 @@ export default function MeuSquad() {
     }
 
     setPdiSalvos(atualizados);
-    localStorage.setItem('@clearit-pdi', JSON.stringify(atualizados));
-    setNovoPDI({ acao: '', prazo: '', status: 'Pendente' });
+    salvarLGPD('@clearit-pdi', atualizados);
+    setNovoPDI({ acao: '', prazo: '', status: 'No prazo' });
     setFormPDIVisible(false);
   };
 
@@ -127,13 +212,13 @@ export default function MeuSquad() {
   const handleExcluirTask = (idParaExcluir) => {
     const novasDeletadas = [...tasksDeletadas, idParaExcluir];
     setTasksDeletadas(novasDeletadas);
-    localStorage.setItem('@clearit-deleted-tasks', JSON.stringify(novasDeletadas));
+    salvarLGPD('@clearit-deleted-tasks', novasDeletadas);
   };
 
   const handleExcluirPDI = (idParaExcluir) => {
     const novasDeletadas = [...pdiDeletados, idParaExcluir];
     setPdiDeletados(novasDeletadas);
-    localStorage.setItem('@clearit-deleted-pdi', JSON.stringify(novasDeletadas));
+    salvarLGPD('@clearit-deleted-pdi', novasDeletadas);
   };
 
   const handleRebaixarAta = (ata) => {
@@ -205,33 +290,6 @@ export default function MeuSquad() {
         { id: `estatico_pdi_2_${membro.id}`, acao: 'Mentoria com Tech Lead (Pair Programming)', prazo: 'Mensal', status: 'No prazo' },
       ]
     };
-  };
-
-  // 🔥 AGORA COM O JAVASCRIPT NATIVO FUNCIONANDO PERFEITAMENTE
-  const getTasksDoMembro = () => {
-    if (!lideradoSelecionado) return [];
-    const tasksBase = lideradoSelecionado.tarefas || [];
-    const tasksSalvasDoMembro = tasksSalvas.filter(t => t.idLiderado === lideradoSelecionado.id.toString());
-    const savedTasksMap = new Map(tasksSalvasDoMembro.map(t => [t.id, t]));
-    
-    const tasksCombinadas = [
-      ...tasksBase.map(t => savedTasksMap.has(t.id) ? savedTasksMap.get(t.id) : t),
-      ...tasksSalvasDoMembro.filter(t => !tasksBase.find(bt => bt.id === t.id))
-    ];
-    return tasksCombinadas.filter(t => !tasksDeletadas.includes(t.id));
-  };
-
-  const getPdiDoMembro = () => {
-    if (!lideradoSelecionado) return [];
-    const pdiBase = gerarPDI(lideradoSelecionado).planoAcao;
-    const pdiSalvosDoMembro = pdiSalvos.filter(p => p.idLiderado === lideradoSelecionado.id.toString());
-    const savedPdiMap = new Map(pdiSalvosDoMembro.map(p => [p.id, p]));
-
-    const pdiCombinados = [
-      ...pdiBase.map(p => savedPdiMap.has(p.id) ? savedPdiMap.get(p.id) : p),
-      ...pdiSalvosDoMembro.filter(p => !pdiBase.find(bp => bp.id === p.id))
-    ];
-    return pdiCombinados.filter(p => !pdiDeletados.includes(p.id));
   };
 
   const tasksDoMembro = getTasksDoMembro();
@@ -415,7 +473,7 @@ export default function MeuSquad() {
                       {formTaskVisible && (
                         <form onSubmit={handleSalvarTask} className="mb-6 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3 animate-[fadeIn_0.2s]">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <input type="text" placeholder="Nome da Tarefa" required value={novaTask.nome} onChange={e => setNovaTask({...novaTask, nome: e.target.value})} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                            <input type="text" placeholder="Nome da Tarefa" required value={novaTask.nome || ''} onChange={e => setNovaTask({...novaTask, nome: e.target.value})} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
                             <div className="flex gap-3">
                               <input type="date" required value={novaTask.ddl} onChange={e => setNovaTask({...novaTask, ddl: e.target.value})} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 text-slate-600 dark:text-slate-300" />
                               <select required value={novaTask.status} onChange={e => setNovaTask({...novaTask, status: e.target.value})} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
@@ -425,7 +483,7 @@ export default function MeuSquad() {
                               </select>
                             </div>
                           </div>
-                          <input type="text" placeholder="Descrição detalhada..." required value={novaTask.descricao} onChange={e => setNovaTask({...novaTask, descricao: e.target.value})} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                          <input type="text" placeholder="Descrição detalhada..." required value={novaTask.descricao || ''} onChange={e => setNovaTask({...novaTask, descricao: e.target.value})} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
                           <div className="flex justify-end gap-2 pt-1">
                             <button type="button" onClick={() => setFormTaskVisible(false)} className="px-4 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700 rounded-lg transition-colors">Cancelar</button>
                             <button type="submit" className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm">{novaTask.id ? 'Salvar Edição' : 'Salvar Task'}</button>
@@ -543,20 +601,50 @@ export default function MeuSquad() {
                         Radar de Competências
                       </h3>
                       <div className="space-y-5">
-                        {gerarPDI(lideradoSelecionado).competencias.map((comp, i) => (
-                          <div key={i}>
-                            <div className="flex justify-between text-sm font-medium mb-1.5">
-                              <span className="text-slate-700 dark:text-slate-300">{comp.nome}</span>
-                              <span className="text-slate-500">{comp.nivel}%</span>
+                        {(() => {
+                          // 🔥 MÁGICA DINÂMICA: Calcula os "Boosts" em tempo real baseado no que está na tela!
+                          const tarefasFeitas = tasksDoMembro.filter(t => t.status.toLowerCase() === 'concluida').length;
+                          const pdisFeitos = pdiDoMembro.filter(p => p.status === 'Concluído').length;
+
+                          const baseComp = gerarPDI(lideradoSelecionado).competencias;
+                          
+                          // Aplica o bônus se o cara entregou tarefas e PDIs
+                          const compsDinamicas = [
+                            { 
+                              nome: baseComp[0].nome, 
+                              nivel: Math.min(100, baseComp[0].nivel + (pdisFeitos * 8)) // +8% por PDI feito
+                            },
+                            { 
+                              nome: baseComp[1].nome, 
+                              nivel: baseComp[1].nivel // Fixo (Baseado no Sentimento das Atas)
+                            },
+                            { 
+                              nome: baseComp[2].nome, 
+                              nivel: Math.min(100, baseComp[2].nivel + (tarefasFeitas * 5)) // +5% por Task feita
+                            }
+                          ];
+
+                          return compsDinamicas.map((comp, i) => (
+                            <div key={i}>
+                              <div className="flex justify-between text-sm font-medium mb-1.5">
+                                <span className="text-slate-700 dark:text-slate-300">{comp.nome}</span>
+                                <span className="text-slate-500">{comp.nivel}%</span>
+                              </div>
+                              <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5">
+                                <div 
+                                  className={`h-2.5 rounded-full transition-all duration-1000 ease-out ${comp.nivel > 70 ? 'bg-emerald-500' : comp.nivel > 40 ? 'bg-amber-500' : 'bg-red-500'}`} 
+                                  style={{ width: `${comp.nivel}%` }}
+                                ></div>
+                              </div>
                             </div>
-                            <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5">
-                              <div 
-                                className={`h-2.5 rounded-full transition-all duration-1000 ${comp.nivel > 70 ? 'bg-emerald-500' : comp.nivel > 40 ? 'bg-amber-500' : 'bg-red-500'}`} 
-                                style={{ width: `${comp.nivel}%` }}
-                              ></div>
-                            </div>
-                          </div>
-                        ))}
+                          ));
+                        })()}
+                      </div>
+
+                      {/* CAIXA DE EXPLICAÇÃO (O SEGREDO DO PRODUTO) */}
+                      <div className="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-800/30 mt-6 text-sm text-slate-600 dark:text-slate-400 leading-relaxed shadow-sm">
+                        <strong className="text-blue-700 dark:text-blue-400 block mb-1">Como o sistema calcula as notas?</strong> 
+                        O algoritmo não usa achismos. O <strong>Hard Skill</strong> sobe com a conclusão dos PDIs técnicos, <strong>Processos</strong> aumenta quando Acordos (Tasks) são entregues no prazo, e <strong>Soft Skills</strong> é medido pela análise de sentimento das Atas.
                       </div>
                     </div>
 
@@ -569,7 +657,7 @@ export default function MeuSquad() {
                         </h3>
                         <button 
                           onClick={() => {
-                            setNovoPDI({ acao: '', prazo: '', status: 'Pendente' });
+                            setNovoPDI({ acao: '', prazo: '', status: 'No prazo' });
                             setFormPDIVisible(!formPDIVisible);
                           }}
                           className="flex items-center gap-1 text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 px-3 py-1.5 rounded-lg transition-colors"
@@ -580,14 +668,29 @@ export default function MeuSquad() {
 
                       {formPDIVisible && (
                         <form onSubmit={handleSalvarPDI} className="mb-6 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3 animate-[fadeIn_0.2s]">
-                          <input type="text" placeholder="Ação de Desenvolvimento (Ex: Tirar certificação AWS)" required value={novoPDI.acao} onChange={e => setNovoPDI({...novoPDI, acao: e.target.value})} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500" />
+                          <input type="text" placeholder="Ação de Desenvolvimento (Ex: Tirar certificação AWS)" required value={novoPDI.acao || ''} onChange={e => setNovoPDI({...novoPDI, acao: e.target.value})} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500" />
                           <div className="flex gap-3">
-                            <input type="text" placeholder="Prazo (Ex: Dez/2026)" required value={novoPDI.prazo} onChange={e => setNovoPDI({...novoPDI, prazo: e.target.value})} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-slate-600 dark:text-slate-300" />
-                            <select required value={novoPDI.status} onChange={e => setNovoPDI({...novoPDI, status: e.target.value})} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500">
-                              <option value="Pendente">Pendente</option>
-                              <option value="Em andamento">Em andamento</option>
+                            <select 
+                              required 
+                              value={novoPDI.prazo || ''} 
+                              onChange={e => setNovoPDI({...novoPDI, prazo: e.target.value})} 
+                              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-slate-600 dark:text-slate-300">
+                              <option value="" disabled>Selecione o prazo...</option>
+                              <option value="1 mês">1 mês</option>
+                              <option value="2 meses">2 meses</option>
+                              <option value="3 meses">3 meses</option>
+                              <option value="6 meses">6 meses</option>
+                            </select>                            
+                            <select 
+                              required 
+                              value={novoPDI.status} 
+                              onChange={e => setNovoPDI({...novoPDI, status: e.target.value})} 
+                              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500"
+                            >
                               <option value="No prazo">No prazo</option>
+                              <option value="Em andamento">Em andamento</option>
                               <option value="Concluído">Concluído</option>
+                              {novoPDI.status === 'Expirado' && <option value="Expirado">Expirado</option>}
                             </select>
                           </div>
                           <div className="flex justify-end gap-2 pt-1">
@@ -606,13 +709,17 @@ export default function MeuSquad() {
                             <div className="flex-1 pr-16">
                               <h4 className={`text-sm font-bold ${acao.status === 'Concluído' ? 'text-slate-500 line-through dark:text-slate-400' : 'text-slate-900 dark:text-white'}`}>{acao.acao}</h4>
                               <div className="flex items-center gap-3 mt-1">
-                                <span className="text-xs text-slate-500 flex items-center gap-1"><Clock className="w-3 h-3" /> {acao.prazo}</span>
+                                <span className="text-xs text-slate-500 flex items-center gap-1">
+                                <Clock className="w-3 h-3" /> {acao.prazoDisplay || acao.prazo}
+                                </span>
                                 <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
-                                  acao.status === 'Em andamento' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                                  acao.status === 'No prazo' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
-                                  acao.status === 'Concluído' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                                  'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-                                }`}>{acao.status}</span>
+                                acao.status === 'Em andamento' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                                acao.status === 'No prazo' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                                acao.status === 'Concluído' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                                acao.status === 'Expirado' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                                'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                                }`}>{acao.status}
+                                </span>
                               </div>
                             </div>
                             <div className="absolute top-0 right-0 flex flex-col items-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -672,6 +779,20 @@ export default function MeuSquad() {
           </div>
         )}
       </div>
+
+      {/* BALÃOZINHO DE AVISO (TOAST FLUTUANTE) */}
+      {balaoAviso.visivel && (
+        <div className="fixed bottom-6 right-6 z-[200] max-w-md bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-5 py-4 rounded-2xl shadow-2xl border border-slate-700 dark:border-slate-200 flex items-center gap-3 animate-[slideIn_0.3s_ease-out]">
+          <AlertCircle className="w-6 h-6 text-amber-400 dark:text-amber-500 flex-shrink-0" />
+          <p className="text-sm font-semibold pr-2">{balaoAviso.mensagem}</p>
+          <button 
+            onClick={() => setBalaoAviso({ visivel: false, mensagem: '' })}
+            className="p-1 hover:bg-slate-800 dark:hover:bg-slate-100 rounded-lg transition-colors ml-auto text-slate-400 hover:text-white dark:text-slate-500 dark:hover:text-slate-900"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
