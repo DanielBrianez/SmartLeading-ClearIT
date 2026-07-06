@@ -165,7 +165,7 @@ A plataforma automatiza a carga cognitiva de planejamento, customiza as abordage
 *   **Critérios de Aceite:**
     - Disparo de Adaptive Cards no Teams com campos de temas e comentários.
     - Respostas persistidas localmente e integradas ao painel de preparação do gestor.
-    - Alternativa de e-mail com link mágico transacional que abre página simplificada na SPA.
+    - Alternativa de e-mail com link mágico transacional ou formulário interativo de resposta direta (Actionable Messages) integrado via webhook no backend.
 
 ### Feature F-10: PDI Padronizado & Extrator de Acordos (NER) (Story 10)
 *   **User Story:** Como líder, quero gerenciar o Plano de Desenvolvimento Individual do meu liderado de forma padronizada e contar com o checklist dos compromissos anteriores integrado à preparação para garantir a continuidade.
@@ -193,7 +193,7 @@ A plataforma automatiza a carga cognitiva de planejamento, customiza as abordage
 *   **User Story:** Como liderado, quero visualizar a ata consolidada da minha reunião e registrar meu "Aceite" nos acordos firmados de forma a formalizar os próximos passos.
 *   **Critérios de Aceite:**
     - Liderado tem acesso a um painel simples e seguro para visualizar seu histórico de atas e pendências.
-    - Botão "Confirmar Acordo" (Sign-off) na ata, atualizando as métricas de governança visíveis ao gestor.
+    - Botão "Confirmar Acordo" (Sign-off) na ata (via interface web) ou diretamente via Adaptive Card no Teams / e-mail interativo (Headless UI), atualizando as métricas de governança visíveis ao gestor.
 
 ### Feature F-15: Termômetro de Segurança Psicológica Pré-Reunião (Story 15)
 *   **User Story:** Como líder, quero saber o estado emocional/energia do meu liderado antes da 1:1 para calibrar minha abordagem e conduzir a reunião de forma empática.
@@ -206,7 +206,7 @@ A plataforma automatiza a carga cognitiva de planejamento, customiza as abordage
 *   **Critérios de Aceite:**
     - Alternância transparente no header da SPA entre "Visão: Líder" e "Visão: Liderado".
     - Exibição de conquistas, badges, trilha de habilidades e o checklist de acordos ativos.
-    - **Microvalidação do Alinhamento:** Interface simples com card para ritos recém-concluídos pelo líder. O colaborador confirma por meio de checkbox se saiu do rito com pelo menos **3 próximos passos claros** e se a reunião gerou valor, desbloqueando a pontuação bilateral de XP no ranking e atualizando o índice de clareza do RH.
+    - **Microvalidação do Alinhamento:** Interface simples com card para ritos recém-concluídos pelo líder. O colaborador confirma por meio de checkbox se saiu do rito com pelo menos **3 próximos passos claros** e se a reunião gerou valor (realizado na interface web ou diretamente por Adaptive Card no Teams/e-mail interativo), desbloqueando a pontuação bilateral de XP no ranking e atualizando o índice de clareza do RH.
 
 ### Feature F-17: Módulo de Alerta de Risco de Colaborador (Opt-In) (Story 17)
 *   **User Story:** Como líder, quero reportar voluntariamente um colaborador em risco de saída ou baixo desempenho para que o RH possa intervir de forma imediata e proativa.

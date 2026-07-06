@@ -184,11 +184,13 @@ Para sanar todos os gaps listados em `docs/onion-gap-analysis.md` de forma organ
 
 #### Arquivos Afetados:
 - Frontend: [App.jsx](file:///c:/Users/Pulse%20Mais/24+1/SmartLeading-ClearIT/frontend/src/App.jsx), [Ranking.jsx](file:///c:/Users/Pulse%20Mais/24+1/SmartLeading-ClearIT/frontend/src/views/Ranking.jsx), [MeuSquad.jsx](file:///c:/Users/Pulse%20Mais/24+1/SmartLeading-ClearIT/frontend/src/views/MeuSquad.jsx), [dados.js](file:///c:/Users/Pulse%20Mais/24+1/SmartLeading-ClearIT/frontend/src/dados.js)
+- Backend: [main.py](file:///c:/Users/Pulse%20Mais/24+1/SmartLeading-ClearIT/backend/app/main.py)
 
 #### Checklist de Ações:
 - [ ] **Frontend/SPA:** Adicionar chave seletora no Header para alternar entre "Visão: Líder" e "Visão: Liderado" (simulando troca de contexto pelo `localStorage`).
 - [ ] **Frontend:** Criar a visualização do liderado contendo: histórico pessoal de atas, badges conquistadas e checklist de metas ativas no PDI.
 - [ ] **Frontend:** Implementar fluxo de microvalidação de atas pendentes no Painel do Liderado. O líder ganha XP parcial (+30 XP no preparo, +30 XP no registro) e o XP final de validação (+40 XP) só é liberado para ambos após o liderado validar que a ata tem próximos passos claros.
+- [ ] **Backend:** Criar endpoint de webhook `/api/webhooks/valida-rito` para receber requisições de validação de canais corporativos (MS Teams / E-mail Actionable Messages) e processar a liberação de XP correspondente.
 - [ ] **Frontend:** Corrigir os dados estáticos do `Ranking.jsx` (associar ao `LEADERBOARD` do `dados.js` e ajustar papel de "Carlos Eduardo" para liderado).
 
 ---
