@@ -10,9 +10,9 @@ Este documento compila as melhores práticas e padrões arquiteturais utilizados
 *   **Conceito:** O usuário interage com o sistema onde ele já trabalha (Slack, Teams, WhatsApp, E-mail) por meio de Adaptive Cards e mensagens interativas, sem precisar abrir a aplicação web principal.
 *   **Aplicação:** O liderado preenche os sentimentos e valida as atas pendentes diretamente no card do Microsoft Teams.
 
-### B. Ata Autônoma via Transcrição (Meeting Intelligence)
-*   **Conceito:** Extração automática de resumos, sentimentos e combinados a partir de áudios/vídeos de reuniões transcritos.
-*   **Aplicação:** O líder grava a 1:1 e o agente transcreve a conversa, detecta quem assumiu qual compromisso, gera o rascunho da ata e do PDI automaticamente, exigindo apenas revisão e aceite final (Sign-off) das duas partes.
+### B. Ata Autônoma via Ditado de Tópicos e Expansão Semântica (Bullet-to-Ata)
+*   **Conceito:** A IA expande anotações rápidas e fragmentadas (ou ditados por voz curtos de 30 segundos) em atas estruturadas e PDIs formais, eliminando a digitação manual sem a necessidade de gravar conversas por inteiro.
+*   **Aplicação:** Em vez de digitar, o líder fala ou escreve palavras-chave rápidas (ex: *"Carlos estudar AWS 3m", "Vinicio refatorar login sexta"*). O agente cruza isso com a pauta e o Framework de Levels, redigindo a ata de 5 blocos e criando as tarefas correspondentes automaticamente.
 
 ### C. Orquestração Multi-Agente (Collaborative Multi-Agent Networks)
 *   **Conceito:** Divisão do trabalho entre agentes especializados que colaboram entre si (ex: um agente focado em avaliar Levels de carreira, outro focado em escuta e mediação de conflitos, outro em telemetria do RH).
