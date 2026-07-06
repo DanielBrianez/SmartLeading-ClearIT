@@ -10,29 +10,29 @@ A plataforma automatiza a carga cognitiva de planejamento, customiza as abordage
 ### 1.1. Linha do Tempo e Fases do Produto (Roadmap)
 
 *   **🚀 Fase 1: MVP (Fundação e Validação) - *Concluído***
-    *   Estruturação da arquitetura moderna de arquivos (*Clean Code* com React + Python/FastAPI).
-    *   Integração com a API do Google Gemini (Motor de Inteligência Artificial).
-    *   Criação do Mega-Prompt com foco na adaptação comportamental do líder e liderado (Metodologia CRIA).
-    *   Geração de Ata Oficial em PDF (`html2pdf.js`) com formatação visual avançada no front-end.
-    *   Conformidade total com a LGPD (*Privacy by Design* com anonimização ativa e dados processados localmente).
+    *   [x] Estruturação da arquitetura moderna de arquivos (*Clean Code* com React + Python/FastAPI).
+    *   [x] Integração com a API do Google Gemini (Motor de Inteligência Artificial).
+    *   [x] Criação do Mega-Prompt com foco na adaptação comportamental do líder e liderado (Metodologia CRIA).
+    *   [x] Geração de Ata Oficial em PDF (`html2pdf.js`) com formatação visual avançada no front-end.
+    *   [x] Conformidade total com a LGPD (*Privacy by Design* com anonimização ativa e dados processados localmente).
 
 *   **🎨 Fase 2: UI/UX e Gestão Inteligente (Aceleração) - *Concluído***
-    *   Interface de alto nível com Tailwind CSS (Suporte a *Dark Mode*, navegação fluida, *Modals Backdrop Blur* e *Toasts* de aviso).
-    *   Implementação de sistema de *Telemetria Local* (`localStorage`) para rascunhos de atas, PDIs e XP.
-    *   Implementação de **Travas de Produtividade** (Limite estrutural de 3 PDIs e 3 Acordos simultâneos, garantindo foco no essencial).
+    *   [x] Interface de alto nível com Tailwind CSS (Suporte a *Dark Mode*, navegação fluida, *Modals Backdrop Blur* e *Toasts* de aviso).
+    *   [x] Implementação de sistema de *Telemetria Local* (`localStorage`) para rascunhos de atas, PDIs e XP.
+    *   [x] Implementação de **Travas de Produtividade** (Limite estrutural de 3 PDIs e 3 Acordos simultâneos, garantindo foco no essencial).
 
 *   **📊 Fase 3: Portal de People Analytics & Gamificação Bilateral (Sprint 2 - MVP) - *Concluído***
-    *   Criação de um dashboard gerencial isolado para a equipe de RH e radar de saúde sistêmica (Heatmap).
-    *   Leitura inteligente e de alta performance de logs locais e telemetria (localStorage).
-    *   Geração de gráficos em tempo real (engajamento por perfil, funil de tarefas e radar de competências).
-    *   Implementação do motor de maturidade bilateral (XP creditado mediante microvalidação do liderado).
-    *   Sistema *Dev Tools* embutido para autoinjeção de dados simulados de testes em demonstrações.
+    *   [x] Criação de um dashboard gerencial isolado para a equipe de RH e radar de saúde sistêmica (Heatmap).
+    *   [x] Leitura inteligente e de alta performance de logs locais e telemetria (localStorage).
+    *   [x] Geração de gráficos em tempo real (engajamento por perfil, funil de tarefas e radar de competências).
+    *   [x] Implementação do motor de maturidade bilateral (XP creditado mediante microvalidação do liderado).
+    *   [x] Sistema *Dev Tools* embutido para autoinjeção de dados simulados de testes em demonstrações.
 
 *   **🔌 Fase 4: Integrações Corporativas (Escala) - *Futuro***
-    *   Integração de notificações reais através de *Webhooks* para o Slack ou Microsoft Teams.
-    *   Integração com a API do Google Calendar / Outlook para sincronização de 1:1s.
-    *   Migração da base de dados local para uma arquitetura Cloud corporativa com criptografia ponta a ponta.
-    *   Envio automático (e opcional) da Ata em PDF para o software central de gestão de talentos do RH.
+    *   [ ] Integração de notificações reais através de *Webhooks* para o Slack ou Microsoft Teams.
+    *   [ ] Integração com a API do Google Calendar / Outlook para sincronização de 1:1s.
+    *   [ ] Migração da base de dados local para uma arquitetura Cloud corporativa com criptografia ponta a ponta.
+    *   [ ] Envio automático (e opcional) da Ata em PDF para o software central de gestão de talentos do RH.
 
 ---
 
