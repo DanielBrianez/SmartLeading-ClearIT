@@ -288,8 +288,12 @@ A plataforma automatiza a carga cognitiva de planejamento, customiza as abordage
 *   **User Story:** Como usuário (líder, liderado ou profissional de RH), quero fazer login com minhas credenciais para acessar o painel correspondente ao meu papel na empresa, assegurando que minhas informações e jornadas de uso sejam isoladas.
 *   **Contexto:** Substituição dos seletores rápidos de mockup (chave seletora de header) por uma autenticação formal que gerencia o fluxo de navegação de forma segura e personalizada na SPA.
 *   **Critérios de Aceite:**
-    - Tela de login inicial na SPA React que bloqueia o acesso a qualquer tela do sistema antes da autenticação.
-    - O sistema valida as credenciais contra a base de usuários e identifica o perfil (`role`):
+    - Tela de login inicial na SPA React que bloqueia o acesso a qualquer tela do sistema antes da autenticação, exigindo entrada de e-mail e senha.
+    - O sistema valida as credenciais contra a base contendo as contas de teste padrão:
+      * **Líder:** `lider@clearit.com` (Senha: `lider123`)
+      * **Liderado:** `liderado@clearit.com` (Senha: `liderado123`)
+      * **RH:** `rh@clearit.com` (Senha: `rh123`)
+    - Após a validação com sucesso, identifica o perfil correspondente (`role`):
       1. **Líder:** Acesso às telas de Copiloto 1:1, Meu Squad e Ranking de Líderes.
       2. **Liderado:** Acesso exclusivo ao Painel do Liderado (histórico de atas, metas do PDI e microvalidações).
       3. **RH:** Acesso restrito ao Painel executivo de People Analytics (heatmaps, compliance, alertas de descobertos e riscos).

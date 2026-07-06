@@ -164,7 +164,11 @@ Conforme estabelecido na [ADR 0004](file:///c:/Users/Pulse%20Mais/24+1/SmartLead
 
 ### 4.13. Autenticação Baseada em Perfis (Role-Based Login) (F-23)
 A aplicação implementa controle de acesso baseado em papéis (RBAC) com três jornadas isoladas:
-1. **Segregação de Rotas na SPA:** O frontend React utiliza um contexto de autenticação (`AuthContext`) que armazena os dados do usuário logado e seu papel (`role`: `lider`, `liderado`, `rh`). O roteador da SPA (`App.jsx`) filtra a visibilidade das abas do painel e intercepta qualquer tentativa de acesso a rotas não autorizadas, redirecionando o usuário para sua respectiva home.
+1. **Mapeamento de Contas de Teste (Mock):**
+   - **Líder:** `lider@clearit.com` / Senha: `lider123` (role: `lider`)
+   - **Liderado:** `liderado@clearit.com` / Senha: `liderado123` (role: `liderado`)
+   - **RH:** `rh@clearit.com` / Senha: `rh123` (role: `rh`)
+2. **Segregação de Rotas na SPA:** O frontend React utiliza um contexto de autenticação (`AuthContext`) que armazena os dados do usuário logado e seu papel (`role`: `lider`, `liderado`, `rh`). O roteador da SPA (`App.jsx`) filtra a visibilidade das abas do painel e intercepta qualquer tentativa de acesso a rotas não autorizadas, redirecionando o usuário para sua respectiva home.
 2. **Isolamento de API no Backend:** Os endpoints do FastAPI validam o cabeçalho de autorização (Bearer Token contendo o `role` do usuário). Endpoints administrativos/People Analytics (`/api/rh/*`) retornam `403 Forbidden` se acionados por tokens de perfis de líderes ou liderados.
 3. **Mapeamento de Acesso:**
    - `lider`: Acessa `/api/gerar-roteiro`, `/api/registrar-download`, e gerencia dados de squads do `localStorage`.
