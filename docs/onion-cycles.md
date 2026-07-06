@@ -122,7 +122,9 @@
 3. **Cenário B (IDE Agêntica):** Crie os diretórios e escreva os arquivos diretamente.
 4. **Cenário A (Web Chat):** Gere todo o conteúdo em blocos markdown com cabeçalhos de arquivo claros (ou gere um arquivo zip/artefatos conforme o ambiente).
 
+
 ### Etapa 4: Atualização do Índice (Index Sync)
 1. Atualize o arquivo central de índice: `docs/sessions/README.md`.
 2. Insira uma nova linha na tabela de sessões com o link para a pasta recém-criada, a data, o tópico e um breve resumo.
 3. Confirme a finalização e recomende os próximos passos.
+
