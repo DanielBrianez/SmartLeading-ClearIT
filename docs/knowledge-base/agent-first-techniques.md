@@ -10,9 +10,11 @@ Este documento compila as melhores práticas e padrões arquiteturais utilizados
 *   **Conceito:** O usuário interage com o sistema onde ele já trabalha (Slack, Teams, WhatsApp, E-mail) por meio de Adaptive Cards e mensagens interativas, sem precisar abrir a aplicação web principal.
 *   **Aplicação:** O liderado preenche os sentimentos e valida as atas pendentes diretamente no card do Microsoft Teams.
 
-### B. Ata Autônoma via Ditado de Tópicos e Expansão Semântica (Bullet-to-Ata)
-*   **Conceito:** A IA expande anotações rápidas e fragmentadas (ou ditados por voz curtos de 30 segundos) em atas estruturadas e PDIs formais, eliminando a digitação manual sem a necessidade de gravar conversas por inteiro.
-*   **Aplicação:** Em vez de digitar, o líder fala ou escreve palavras-chave rápidas (ex: *"Carlos estudar AWS 3m", "Vinicio refatorar login sexta"*). O agente cruza isso com a pauta e o Framework de Levels, redigindo a ata de 5 blocos e criando as tarefas correspondentes automaticamente.
+### B. Ata Autônoma via Ditado de Tópicos e Visão Computacional (Multimodal Shorthand)
+*   **Conceito:** A IA utiliza capacidades multimodais para traduzir anotações rápidas e fragmentadas (via digitação de palavras-chave, ditados por voz curtos de 30 segundos ou **fotos de anotações feitas à mão em papel/quadros**) em atas estruturadas e PDIs formais, sem a necessidade de gravação de áudio.
+*   **Aplicação:** O gestor pode:
+    1.  Digitar ou ditar palavras-chave (ex: *"Carlos estudar AWS 3m"*, *"Vinicio refatorar login sexta"*).
+    2.  **Tirar uma foto de suas anotações manuscritas** em um caderno ou quadro-negro durante a reunião. O agente utiliza a API de visão do Gemini para transcrever o manuscrito (OCR) e estruturar o rascunho completo da ata de 5 blocos com suas respectivas tarefas de desenvolvimento automaticamente.
 
 ### C. Orquestração Multi-Agente (Collaborative Multi-Agent Networks)
 *   **Conceito:** Divisão do trabalho entre agentes especializados que colaboram entre si (ex: um agente focado em avaliar Levels de carreira, outro focado em escuta e mediação de conflitos, outro em telemetria do RH).
