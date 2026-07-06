@@ -1,4 +1,4 @@
-# ADR 0001: Validação Bilateral via Canais de Comunicação (Omnichannel / Adaptive Cards)
+# ADR 0004: Validação Bilateral via Canais de Comunicação (Omnichannel / Adaptive Cards)
 
 *   **Status:** Aprovado
 *   **Data:** 2026-07-06
