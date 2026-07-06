@@ -33,6 +33,12 @@ A plataforma automatiza a carga cognitiva de planejamento, customiza as abordage
     *   [ ] Integração com a API do Google Calendar / Outlook para sincronização de 1:1s.
     *   [ ] Migração da base de dados local para uma arquitetura Cloud corporativa com criptografia ponta a ponta.
     *   [ ] Envio automático (e opcional) da Ata em PDF para o software central de gestão de talentos do RH.
+    *   [ ] F-18: Omnicanalidade e Micro-Interfaces (Headless UI) para interações direto no Teams/E-mail.
+    *   [ ] F-19: Entrada multimodal via voz ou visão computacional (reconhecimento de fotos de anotações feitas à mão).
+    *   [ ] F-20: Orquestração de Rede Multi-Agente com agentes especialistas de IA (Carreira, Clima, etc.).
+    *   [ ] F-21: Redução de formulários com entrada por prompt único e feedback de lacunas dos 5 blocos obrigatórios de 1:1.
+    *   [ ] F-22: Validação bilateral headless diretamente por resposta rápida em e-mail ou card corporativo.
+
 
 ---
 
@@ -65,6 +71,14 @@ A plataforma automatiza a carga cognitiva de planejamento, customiza as abordage
 | F-15 | Termômetro de Segurança Psicológica | Pronto para Dev | Envio de escala de humor no Teams 2 dias antes e ajuste dinâmico do prompt do roteiro da IA |
 | F-16 | Painel do Liderado & Trilha de Levels | Pronto para Dev | Espaço centralizado para o colaborador ver conquistas, progresso do PDI, acordos e trilha de levels |
 | F-17 | Módulo de Alerta de Risco de Colaborador (Opt-In) | Pronto para Dev | Checkbox na ata para reportar risco ao RH. Segregação nominal local e classificação semântica de risco/severidade via IA anônima. |
+| F-18 | Omnicanalidade e Micro-Interfaces (Omnichannel & Headless UI) | Pronto para Dev | Permite interações do usuário diretamente em canais onde já trabalha (Slack, Teams, E-mail). |
+| F-19 | Ata Autônoma via Ditado de Tópicos e Visão (Multimodal Shorthand) | Pronto para Dev | Transcrição de áudio curto e OCR de anotações manuscritas por fotos via IA do Gemini. |
+| F-20 | Orquestração Multi-Agente (Collaborative Multi-Agent Networks) | Pronto para Dev | Rede de agentes especializados (Carreira, Clima) colaborando para sugerir planos. |
+| F-21 | Redução de Formulários (Form Reduction / Prompt-Driven Script Prep) | Pronto para Dev | Entrada por prompt de texto simples e verificação de lacunas nos 5 blocos de 1:1. |
+| F-22 | Validação por Resposta do Teams/E-mail (Omnichannel Bilateral) | Pronto para Dev | Confirmação de atas por links mágicos e webhooks sem exigir acesso à SPA, via ADR 0004. |
+| F-23 | Autenticação Baseada em Perfis (Role-Based Login) | Pronto para Dev | Tela de login dedicada e segmentação das jornadas da SPA (Líder, Liderado, RH) conforme papel autenticado. |
+
+
 
 ---
 
@@ -100,6 +114,8 @@ A plataforma automatiza a carga cognitiva de planejamento, customiza as abordage
       - *Corretivo Urgente:* `👂 1. Entendimento dos Fatos & Escuta Ativa` | `⚠️ 2. Fato Crítico e Evidência` | `🚨 3. Plano de Correção Imediata` | `🤝 4. Compromissos e Data Limite`
       - *Feedback em 1:1:* `👂 1. Entendimento dos Fatos & Escuta Ativa` | `💬 2. Ponto de Alinhamento` | `💡 3. Combinado Rápido` | `🤝 4. Apoio do Gestor`
     - Exportação do PDF de forma 100% local no cliente via `html2pdf.js`, sem envio de dados pessoais dos funcionários ao servidor externo.
+    - **Guias de Rascunho Inline (Visual Scaffolding):** O campo de anotações do editor carrega placeholders/marca d'água editáveis e de tom claro (`text-slate-300 / dark:text-slate-700`) estruturando a escrita nos 5 blocos da ClearIT para guiar o preenchimento livre do líder.
+
 
 ### Feature F-03: Motor de Maturidade & Liga de Líderes (Story 3)
 *   **User Story:** Como líder, quero acompanhar minha classificação de maturidade, ver meu posicionamento no ranking individual e por equipes da minha área, e conquistar insígnias de boas práticas baseadas na condução e alinhamento real dos ritos.
@@ -133,7 +149,11 @@ A plataforma automatiza a carga cognitiva de planejamento, customiza as abordage
     - **Novas Métricas de People Analytics:** O painel exibe:
       - A taxa de conformidade geral das 1:1s e ritos.
       - **Índice de Clareza dos Times:** Média de próximos passos claros identificados pelos colaboradores nas microvalidações de ritos.
+      - **Índice de Relevância de Carreira (IRC):** Média acumulada (em percentual) das respostas dos liderados se a 1:1 foi relevante para sua carreira.
+      - **Alerta Crítico de Suporte do RH:** Destaca em cor de alerta/vermelho suave líderes ou áreas com IRC inferior a 70%, indicando ao RH a necessidade de oferecer suporte ativo/capacitação para aquele gestor, sem fins punitivos.
+      - **Gráfico de Evolução do IRC:** Gráfico de linha mostrando a evolução temporal da relevância de carreira por mês.
       - A evolução do índice de maturidade de liderança de cada gestor e sua área.
+
     - **Radar de Saúde Sistêmica (Heatmap Temático):** Matriz que cruza as Diretorias/Líderes versus Macrotemas da ClearIT. O gráfico renderiza intensidades estatísticas usando: **cinza-claro** (normalidade), **âmbar suave** (atenção) e **crimson profundo/magenta vibrante** (anomalia crítica).
     - **Regra de Ouro do Anonimato (N-Size Masking):** Permite drill-down por ID de líder. O `ID_do_Liderado` é descartado. Caso uma equipe tenha menos de 5 liderados, seus dados temáticos são consolidados em um grupo genérico para impedir quebras acidentais de sigilo.
 
@@ -206,7 +226,11 @@ A plataforma automatiza a carga cognitiva de planejamento, customiza as abordage
 *   **Critérios de Aceite:**
     - Alternância transparente no header da SPA entre "Visão: Líder" e "Visão: Liderado".
     - Exibição de conquistas, badges, trilha de habilidades e o checklist de acordos ativos.
-    - **Microvalidação do Alinhamento:** Interface simples com card para ritos recém-concluídos pelo líder. O colaborador confirma por meio de checkbox se saiu do rito com pelo menos **3 próximos passos claros** e se a reunião gerou valor (realizado na interface web ou diretamente por Adaptive Card no Teams/e-mail interativo), desbloqueando a pontuação bilateral de XP no ranking e atualizando o índice de clareza do RH.
+    - **Microvalidação do Alinhamento e Relevância:** Interface simples com card para ritos recém-concluídos pelo líder. O colaborador responde obrigatoriamente a duas perguntas fechadas (realizado na interface web ou diretamente por Adaptive Card no Teams/e-mail interativo):
+      1. Se saiu com pelo menos **3 próximos passos claros** (Sim/Não - alimenta o Índice de Clareza do RH).
+      2. Se a reunião de 1:1 foi **relevante para o desenvolvimento de sua carreira** (Sim/Não - alimenta o Índice de Relevância de Carreira (IRC) do RH).
+      O preenchimento desbloqueia a pontuação bilateral de XP no ranking.
+
 
 ### Feature F-17: Módulo de Alerta de Risco de Colaborador (Opt-In) (Story 17)
 *   **User Story:** Como líder, quero reportar voluntariamente um colaborador em risco de saída ou baixo desempenho para que o RH possa intervir de forma imediata e proativa.
@@ -216,7 +240,65 @@ A plataforma automatiza a carga cognitiva de planejamento, customiza as abordage
     - **Segregação de Dados Seguro:** O nome do colaborador e do líder ficam restritos ao banco de dados relacional local da empresa. O texto descritivo com o motivo do risco é enviado à IA de forma **100% anonimizada** via AI Gateway.
     - A IA analisa e categoriza o risco (Carreira, Clima ou Performance) e sua severidade (Baixa, Média, Alta) para exibição no painel de urgências do BP de RH.
 
+### Feature F-18: Omnicanalidade e Micro-Interfaces (Omnichannel & Headless UI) (Story 18)
+*   **User Story:** Como gestor ou liderado, quero interagir com o ecossistema de liderança diretamente do meu canal de comunicação usual (Microsoft Teams, Slack, E-mail) sem precisar abrir o portal web principal, para reduzir a fricção operacional no preenchimento de sentimentos e consultas.
+*   **Contexto:** Permite que a interface se adapte aos fluxos de trabalho já existentes dos usuários, utilizando o padrão Adaptive Cards para renderização nativa de elementos interativos e coleta de inputs de forma assíncrona.
+*   **Critérios de Aceite:**
+    - Geração de Adaptive Cards estruturados em JSON que se adaptam visualmente ao Microsoft Teams e Slack.
+    - Suporte a formulários dinâmicos de um clique dentro do card para envio de humor e pauta pré-1:1.
+    - Segurança de dados: o tráfego dos cards é seguro e não expõe dados sensíveis no trânsito externo.
+
+### Feature F-19: Ata Autônoma via Ditado de Tópicos e Visão Computacional (Multimodal Shorthand) (Story 19)
+*   **User Story:** Como líder, quero registrar atas e PDIs usando ditados rápidos de voz ou fotos das minhas anotações manuscritas em papel/quadros para que a IA estruture a ata de 5 blocos automaticamente, economizando tempo de digitação manual.
+*   **Contexto:** Utilização de recursos multimodais (áudio e visão computacional) integrados ao motor Gemini para converter anotações informais ou anotações por voz de 30 segundos em atas e PDIs formais estruturados.
+*   **Critérios de Aceite:**
+    - Upload de fotos de anotações físicas pelo gestor na tela de preparação/ata da reunião.
+    - Processamento de imagem (OCR) via API de visão do Gemini para transcrever manuscritos e traduzi-los em texto estruturado.
+    - Possibilidade de envio de áudio curto de 30 segundos sem gravação contínua, convertendo os tópicos ditados no roteiro.
+    - A IA monta e preenche automaticamente os 5 blocos oficiais da ata (Check-in, Pauta, Obstáculos, Desenvolvimento, Acordos) a partir dos insumos multimodais.
+
+### Feature F-20: Orquestração Multi-Agente (Collaborative Multi-Agent Networks) (Story 20)
+*   **User Story:** Como líder, quero que o meu copiloto conte com análises de agentes especializados em diferentes verticais (carreira, clima e RH) para que o plano comportamental e de desenvolvimento do meu liderado seja mais robusto e assertivo.
+*   **Contexto:** Transição de uma inferência de IA monolítica para uma rede colaborativa de agentes que discutem internamente antes de devolver o payload ao usuário.
+*   **Critérios de Aceite:**
+    - Divisão da inferência em pelo menos dois agentes especialistas: "Agente de Carreira" (focado no Framework de Levels e PDI) e "Agente de Clima" (focado em sentimentos e bem-estar).
+    - O Agente de Carreira deve dialogar com o Agente de Clima para calibrar as metas de PDI com base no estado de humor e maturidade do colaborador.
+    - Resposta única consolidada enviada à interface, detalhando as contribuições de cada agente se solicitado.
+
+### Feature F-21: Redução de Formulários (Form Reduction / Prompt-Driven Script Prep) (Story 21)
+*   **User Story:** Como líder, quero preparar uma 1:1 digitando apenas uma linha de intenção de pauta (ex: "Conversar com o Carlos sobre a promoção dele") para que a IA busque o histórico e o cargo do liderado e preencha as informações, alertando-me se algum dos 5 blocos obrigatórios de 1:1 ficar sem informação por falta de contexto.
+*   **Contexto:** Substituição dos campos manuais de pauta na SPA por uma caixa de prompt único. A inteligência do sistema resolve e orquestra os dados do `localStorage` para preencher as lacunas do roteiro.
+*   **Critérios de Aceite:**
+    - Disponibilização de um campo único de entrada textual ("Prompt do Gestor") na aba de preparação.
+    - O sistema recupera automaticamente do `localStorage` os dados de cargo, senioridade, atas anteriores, PDIs e acordos pendentes do liderado selecionado.
+    - **Feedback de Lacunas (5 Blocos):** O sistema deve analisar as informações recuperadas e a entrada do líder e, se algum dos 5 blocos obrigatórios de 1:1 (Check-in Humano, Pauta do Liderado, Obstáculos, Desenvolvimento, Acordos) não contiver informações suficientes, o sistema deve retornar um aviso amigável ao líder identificando especificamente quais blocos ficaram incompletos.
+    - Geração do roteiro de 5 blocos a partir da consolidação inteligente de dados.
+
+### Feature F-22: Validação por Resposta do Teams/E-mail (Omnichannel Bilateral Validation) (Story 22)
+*   **User Story:** Como liderado, quero validar o alinhamento e os acordos da minha 1:1 respondendo diretamente ao e-mail recebido ou clicando em um botão no Microsoft Teams, sem precisar fazer login no portal web principal do Smart Leading.
+*   **Contexto:** Redução da fricção de engajamento do colaborador por meio de validação unilateral headless, seguindo as diretrizes da ADR 0004.
+*   **Critérios de Aceite:**
+    - O sistema dispara um link mágico seguro com um formulário de validação simplificado via e-mail ou Adaptive Card no Microsoft Teams.
+    - O colaborador valida a clareza da reunião (se saiu com pelo menos 3 próximos passos claros) e sua relevância para o desenvolvimento da carreira (IRC) respondendo com Sim/Não diretamente no canal escolhido.
+    - As respostas interativas disparam uma requisição POST segura (webhook) para o backend do Smart Leading.
+
+    - O status do rito é updated de "pendente" para "concluido" in-place e os pontos de XP são creditados bilateralmente no banco de dados.
+
+### Feature F-23: Autenticação Baseada em Perfis (Role-Based Login) (Story 23)
+*   **User Story:** Como usuário (líder, liderado ou profissional de RH), quero fazer login com minhas credenciais para acessar o painel correspondente ao meu papel na empresa, assegurando que minhas informações e jornadas de uso sejam isoladas.
+*   **Contexto:** Substituição dos seletores rápidos de mockup (chave seletora de header) por uma autenticação formal que gerencia o fluxo de navegação de forma segura e personalizada na SPA.
+*   **Critérios de Aceite:**
+    - Tela de login inicial na SPA React que bloqueia o acesso a qualquer tela do sistema antes da autenticação.
+    - O sistema valida as credenciais contra a base de usuários e identifica o perfil (`role`):
+      1. **Líder:** Acesso às telas de Copiloto 1:1, Meu Squad e Ranking de Líderes.
+      2. **Liderado:** Acesso exclusivo ao Painel do Liderado (histórico de atas, metas do PDI e microvalidações).
+      3. **RH:** Acesso restrito ao Painel executivo de People Analytics (heatmaps, compliance, alertas de descobertos e riscos).
+    - Remoção definitiva dos botões de alternância rápidos de papel ("Visão: Líder / Liderado") nos cabeçalhos em modo de produção.
+    - Bloqueio rígido de rotas no frontend: redirecionamento automático caso um usuário tente forçar rotas de perfis diferentes do seu via URL.
+
 ---
+
+
 
 ## 5. Contexto Organizacional de Referência (ClearIT)
 *   **Áreas Cadastradas (10 áreas):** Diretoria, RH, Financeiro, Comercial, Pré-vendas, Pós-vendas, Alianças e Parcerias, Licitações e Contratos, Precificação e Suprimentos, e Marketing.

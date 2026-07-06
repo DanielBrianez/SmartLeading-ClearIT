@@ -86,41 +86,47 @@ A arquitetura blinda a empresa contra vazamentos e passivos trabalhistas atravé
 
 ## 4. Especificações Técnicas de Implementação (MVP)
 
-### 3.1. Arquitetura do Privacy Shield & AI Gateway (F-13)
+### 4.1. Arquitetura do Privacy Shield & AI Gateway (F-13)
 Para garantir conformidade inegociável com a LGPD e mitigar passivos trabalhistas, implementamos a segurança em 3 camadas:
 1.  **Tokenização Client-Side:** Antes de disparar a requisição de texto à API, scripts no frontend (React) detectam e mascaram padrões regex de documentos (`\d{3}\.\d{3}\.\d{3}-\d{2}` para CPF, etc.) substituindo-os por `[DOCUMENTO]`.
 2.  **AI Gateway Proxy (Higienização Semântica):** O backend FastAPI atua como um gateway intermediário filtrando menções a diagnósticos de saúde (como depressão, burnout) ou adjetivos de ataque ao caráter, substituindo-os por termos neutros (ex: *"está com depressão"* vira `[MOTIVO_MÉDICO_REDUZIDO]`).
 3.  **Zero-Retention Policy:** As credenciais e contratos de API com o provedor de LLM (Gemini) são configuradas no modo corporativo com retenção zero de dados de entrada para treino de modelos.
 
-### 3.2. Roteamento Dinâmico de Prompts (F-01)
+### 4.2. Roteamento Dinâmico de Prompts (F-01)
 O endpoint `/api/gerar-roteiro` do backend FastAPI aceita o parâmetro `tipo_conversa` para definir dinamicamente o prompt e comportamento da IA:
 *   **Parâmetro `11`:** Ativa o prompt estruturado em 5 blocos da ClearIT (Check-in humano, Pauta do liderado, Status/Obstáculos, Desenvolvimento/Levels, Acordos).
 *   **Parâmetro `feedback` (SBI Guard):** Ativa o prompt que expurga adjetivos e força o roteiro nas 4 etapas (Contexto, Escuta Ativa, SBI Factual e Co-construção).
 
-### 3.3. UX Scaffolding Dinâmico (F-02)
+### 4.3. UX Scaffolding Dinâmico (F-02)
 O Editor Rich Text no frontend carrega cabeçalhos estruturados com base no tipo de rito selecionado. As tags HTML/Markdown dos cabeçalhos (estilizados em Bold grafite/azul-marinho profundo) são marcadas como `contenteditable="false"` para travar a deleção dos títulos, enquanto o conteúdo interno abaixo deles aceita edição normal (`contenteditable="true"`).
+Além disso, o campo de anotações do líder carrega guias de rascunho de tom cinza claro (`text-slate-300 / dark:text-slate-700` ou baixa opacidade) com a estrutura dos 5 blocos da ClearIT, agindo como rascunho flutuante que orienta a escrita sem bloquear a edição livre.
 
-### 3.4. Extrator de Acordos Dinâmicos - NER (F-10)
+
+### 4.4. Extrator de Acordos Dinâmicos - NER (F-10)
 Ao abrir a tela de preparação de uma nova reunião para um liderado, o frontend busca no `localStorage` a ata anterior desse mesmo colaborador. A IA varre o Bloco 4 (`🤝 4. Acordos e Próximos Passos`) utilizando processamento de linguagem natural básico para extrair a estrutura:
 *   `[Quem fez]` + `[O que fez]` + `[Prazo]`
 O resultado é injetado como um checklist de acompanhamento in-app obrigatório no cabeçalho da preparação atual.
 
-### 3.5. Monitor de Cadência Relacional (F-08)
+### 4.5. Monitor de Cadência Relacional (F-08)
 O card de "Colaboradores Descobertos" no Painel do RH calcula a diferença de dias entre a data atual e a data do último rito registrado localmente no banco para cada funcionário:
 *   `Diferenca_Dias = Data_Atual - Data_Ultimo_Rito`
 Se `Diferenca_Dias > 30`, o colaborador é adicionado à lista de risco nominal na dashboard do RH, e o botão `[⚡ Disparar Lembrete]` fica disponível. **Esta lógica roda inteiramente no cliente via JavaScript relacional puro (ou consulta de banco sem IA) para assegurar custo zero e precisão de dados.**
 
-### 3.6. Segregação de Dados no Alerta de Risco (F-17)
+### 4.6. Segregação de Dados no Alerta de Risco (F-17)
 Ao marcar a checkbox de "Reportar risco crítico de turnover/performance":
 *   O nome do colaborador e do líder são gravados exclusivamente na tabela de banco local protegida da empresa.
 *   O texto descritivo do motivo é higienizado e tokenizado via AI Gateway antes de ser enviado à IA.
 *   A IA analisa o texto anonimizado e retorna apenas o tipo do risco (Carreira/Clima/Performance) e severidade (Alta/Média/Baixa) para alimentar a lista de urgências do BP de RH.
 
-### 3.7. Mecânicas Técnicas de Gamificação Colaborativa (F-03 & F-04)
-1.  **Lógica da Validação Bilateral:** Ao finalizar um rito, o backend grava a ata com `status: "pendente"` e gera um hash identificador do rito. O frontend do liderado (**F-16**) consulta os ritos pendentes de validação e expõe a checkbox de confirmação. Quando o liderado clica em validar, o frontend dispara uma requisição que altera o status do rito para `"concluido"`, disparando a liberação de XP para ambos os perfis no `localStorage` e a computação no ranking.
+### 4.7. Mecânicas Técnicas de Gamificação Colaborativa (F-03 & F-04)
+1.  **Lógica da Validação Bilateral:** Ao finalizar um rito, o backend grava a ata com `status: "pendente"` e gera um hash identificador do rito. O frontend do liderado (**F-16**) consulta os ritos pendentes de validação e expõe as perguntas fechadas (clareza e relevância). Quando o liderado valida, o frontend dispara uma requisição que altera o status do rito para `"concluido"`, gravando as respostas no banco PostgreSQL Serverless, disparando a liberação de XP para ambos os perfis no `localStorage` e a computação no ranking.
 2.  **Cálculo do Índice de Clareza do RH:** A microvalidação do colaborador envia ao banco de telemetria a resposta binária (`sentiu_clareza = 1` ou `0`). O painel do RH calcula o índice de clareza pela fórmula:
     $$\text{Indice de Clareza} = \frac{\sum \text{sentiu\_clareza}}{\text{Total de Ritos Validados}} \times 100$$
-3.  **Distribuição de Pontos em 3 Fases (IA Flow):** O XP de um rito é distribuído e persistido em três etapas transacionais no `localStorage`:
+3.  **Cálculo do Índice de Relevância de Carreira (IRC) do RH:** O endpoint `/api/rh/metricas` lê a resposta binária do liderado (`relevante_carreira = 1` ou `0`) e calcula o IRC agregado pela fórmula:
+    $$\text{IRC} = \frac{\sum \text{relevante\_carreira}}{\text{Total de Ritos Validados}} \times 100$$
+4.  **Alerta de IRC Crítico e Suporte ao Gestor:** A lógica do backend/frontend monitora o IRC de cada gestor individualmente. Caso o `IRC_do_Gestor < 70%`, o sistema destaca o gestor no painel do RH em cor de alerta/vermelho suave com a indicação `[Apoio Necessário]`, orientando o RH a oferecer mentoria e treinamento em gestão/carreira para esse líder.
+5.  **Distribuição de Pontos em 3 Fases (IA Flow):** O XP de um rito é distribuído e persistido em três etapas transacionais no `localStorage`:
+
     *   `XP_Preparacao` (+30 XP) liberado no callback de sucesso da geração do roteiro com a IA (/api/gerar-roteiro).
     *   `XP_Conducao` (+30 XP) liberado ao preencher todos os blocos obrigatórios da ata no editor.
     *   `XP_Validacao` (+40 XP) liberado apenas após a confirmação digital (microvalidação) do liderado.
@@ -129,6 +135,41 @@ Ao marcar a checkbox de "Reportar risco crítico de turnover/performance":
     *   `500 <= XP < 1500` ➔ `Nivel 2: Em Desenvolvimento` (Trilha: Líder em Transição)
     *   `1500 <= XP < 3000` ➔ `Nivel 3: Consistente` (Trilha: Líder Engajado)
     *   `XP >= 3000` ➔ `Nivel 4: Referência` (Trilha: Líder Multiplicador)
+
+### 4.8. Arquitetura de Micro-Interfaces e Omnicanalidade (F-18)
+As interações omnichannel com o Smart Leading baseiam-se em Adaptive Cards no padrão JSON, consumidos por clientes como MS Teams e clientes de e-mail compatíveis. A renderização do layout e a captura de dados ocorrem fora da SPA, sendo orquestradas pelo backend FastAPI que monta e entrega os schemas dinâmicos de card.
+
+### 4.9. Reconhecimento Multimodal de Voz/Manuscritos (F-19)
+* **Entrada de Imagem (Visão):** O frontend envia imagens convertidas em Base64 ou arquivos multipart para `/api/multimodal/ocr`. O backend consome a API multimodal do Gemini (`gemini-2.5-flash` ou superior) enviando as instruções e a imagem para extração de texto (OCR) e estruturação semântica.
+* **Entrada de Voz:** Áudios curtos de até 30 segundos são capturados no frontend e convertidos em texto usando APIs nativas do browser (Web Speech API) ou enviados ao backend para processamento STT (Speech-to-Text).
+* **Mapeamento:** O texto extraído é limpo e injetado nos 5 blocos obrigatórios de 1:1.
+
+### 4.10. Rede Cooperativa de Multi-Agentes (F-20)
+O backend orquestrará a geração de roteiros através de agentes especializados definidos por papéis (prompts de sistema dedicados):
+* **Agente de Carreira (Pessoas):** Análises com foco em Levels e PDI.
+* **Agente de Clima (Comportamento):** Análises com foco em sentimentos e bem-estar.
+O pipeline executa inferências encadeadas: o Agente de Clima analisa o tom emocional recente, passando insights para o Agente de Carreira, que por sua vez gera o roteiro final equilibrando metas e sensibilidade.
+
+### 4.11. Motor Inteligente de Redução de Formulários (F-21)
+Ao receber uma pauta contendo apenas um prompt curto (ex: "Falar sobre promoção do Carlos"), o endpoint `/api/gerar-roteiro` realiza as seguintes operações:
+1. Busca no banco de dados e no payload o histórico de atas, PDI e tarefas do liderado selecionado.
+2. Valida o prompt e o histórico contra os **5 blocos essenciais** de 1:1 (Check-in Humano, Pauta do Liderado, Obstáculos, Desenvolvimento, Acordos).
+3. **Alerta de Lacunas:** Se algum dos blocos obrigatórios não contiver dados contextuais suficientes (ex: nenhuma pauta enviada previamente ou falta de PDI ativo), a API do backend retorna uma lista de avisos em `alertas_blocos` (ex: `["Pauta do Liderado", "Obstáculos"]`) e a interface do gestor exibe um alerta indicando que tais tópicos precisarão ser investigados durante a conversa.
+
+### 4.12. Validação Omnichannel Headless via Webhooks (F-22)
+Conforme estabelecido na [ADR 0004](file:///c:/Users/Pulse%20Mais/24+1/SmartLeading-ClearIT/docs/knowledge-base/adr/0004-validacao-bilateral-omnichannel.md), a validação bilateral é concluída sem navegação na SPA React:
+1. O backend envia um Adaptive Card para o MS Teams ou E-mail com caixas de seleção sobre a clareza do encontro e acordos firmados.
+2. A resposta do usuário dispara um payload de ação do tipo `Action.Execute` para o webhook `/api/webhooks/valida-rito` no backend FastAPI.
+3. O backend autentica a assinatura do webhook, processa a resposta binária (`sentiu_clareza`), atualiza o status da ata correspondente no banco PostgreSQL Serverless para `"concluido"`, e credita a pontuação de XP final de validação (+40 XP) no `localStorage` por meio de sincronização no próximo carregamento da interface.
+
+### 4.13. Autenticação Baseada em Perfis (Role-Based Login) (F-23)
+A aplicação implementa controle de acesso baseado em papéis (RBAC) com três jornadas isoladas:
+1. **Segregação de Rotas na SPA:** O frontend React utiliza um contexto de autenticação (`AuthContext`) que armazena os dados do usuário logado e seu papel (`role`: `lider`, `liderado`, `rh`). O roteador da SPA (`App.jsx`) filtra a visibilidade das abas do painel e intercepta qualquer tentativa de acesso a rotas não autorizadas, redirecionando o usuário para sua respectiva home.
+2. **Isolamento de API no Backend:** Os endpoints do FastAPI validam o cabeçalho de autorização (Bearer Token contendo o `role` do usuário). Endpoints administrativos/People Analytics (`/api/rh/*`) retornam `403 Forbidden` se acionados por tokens de perfis de líderes ou liderados.
+3. **Mapeamento de Acesso:**
+   - `lider`: Acessa `/api/gerar-roteiro`, `/api/registrar-download`, e gerencia dados de squads do `localStorage`.
+   - `liderado`: Acessa `/api/webhooks/valida-rito` e visualiza histórico de atas e PDIs.
+   - `rh`: Acessa `/api/rh/metricas` e `/api/rh/alerta-risco`.
 
 ---
 
@@ -179,18 +220,21 @@ Para sanar todos os gaps listados em `docs/onion-gap-analysis.md` de forma organ
 
 ---
 
-### Fase 4: Gamificação & Painel do Liderado (F-03 + F-16)
-*Implementa a validação bilateral dos ritos de feedback e a visualização do colaborador, corrigindo o cálculo simples de XP.*
+### Fase 4: Gamificação & Painel do Liderado (F-03 + F-16 + F-23)
+*Implementa a validação bilateral dos ritos, visualização do colaborador e segregação de acesso baseada em perfis.*
 
 #### Arquivos Afetados:
 - Frontend: [App.jsx](file:///c:/Users/Pulse%20Mais/24+1/SmartLeading-ClearIT/frontend/src/App.jsx), [Ranking.jsx](file:///c:/Users/Pulse%20Mais/24+1/SmartLeading-ClearIT/frontend/src/views/Ranking.jsx), [MeuSquad.jsx](file:///c:/Users/Pulse%20Mais/24+1/SmartLeading-ClearIT/frontend/src/views/MeuSquad.jsx), [dados.js](file:///c:/Users/Pulse%20Mais/24+1/SmartLeading-ClearIT/frontend/src/dados.js)
 - Backend: [main.py](file:///c:/Users/Pulse%20Mais/24+1/SmartLeading-ClearIT/backend/app/main.py)
 
 #### Checklist de Ações:
+- [ ] **Frontend:** Desenvolver tela de login na SPA React vinculada aos perfis de usuários de teste e salvando o estado em `AuthContext`.
+- [ ] **Frontend:** Implementar rotas e menus de navegação privados, ocultando abas indisponíveis para o perfil autenticado.
 - [ ] **Frontend/SPA:** Adicionar chave seletora no Header para alternar entre "Visão: Líder" e "Visão: Liderado" (simulando troca de contexto pelo `localStorage`).
 - [ ] **Frontend:** Criar a visualização do liderado contendo: histórico pessoal de atas, badges conquistadas e checklist de metas ativas no PDI.
-- [ ] **Frontend:** Implementar fluxo de microvalidação de atas pendentes no Painel do Liderado. O líder ganha XP parcial (+30 XP no preparo, +30 XP no registro) e o XP final de validação (+40 XP) só é liberado para ambos após o liderado validar que a ata tem próximos passos claros.
-- [ ] **Backend:** Criar endpoint de webhook `/api/webhooks/valida-rito` para receber requisições de validação de canais corporativos (MS Teams / E-mail Actionable Messages) e processar a liberação de XP correspondente.
+- [ ] **Frontend:** Implementar fluxo de microvalidação de atas pendentes no Painel do Liderado. O líder ganha XP parcial (+30 XP no preparo, +30 XP no registro) e o XP final de validação (+40 XP) só é liberado para ambos após o liderado responder às perguntas obrigatórias (clareza de próximos passos e relevância da 1:1 para a carreira).
+- [ ] **Backend:** Adaptar as tabelas e endpoints de banco de dados para salvar a resposta de relevância (`relevante_carreira`).
+- [ ] **Backend:** Criar endpoint de webhook `/api/webhooks/valida-rito` para receber requisições de validação de canais corporativos (MS Teams / E-mail Actionable Messages) e processar as respostas (clareza e relevância) e a liberação de XP correspondente.
 - [ ] **Frontend:** Corrigir os dados estáticos do `Ranking.jsx` (associar ao `LEADERBOARD` do `dados.js` e ajustar papel de "Carlos Eduardo" para liderado).
 
 ---
@@ -203,9 +247,10 @@ Para sanar todos os gaps listados em `docs/onion-gap-analysis.md` de forma organ
 - Frontend: [PainelRH.jsx](file:///c:/Users/Pulse%20Mais/24+1/SmartLeading-ClearIT/frontend/src/views/PainelRH.jsx), [Home.jsx](file:///c:/Users/Pulse%20Mais/24+1/SmartLeading-ClearIT/frontend/src/views/Home.jsx)
 
 #### Checklist de Ações:
-- [ ] **Backend:** Criar endpoint `/api/rh/metricas` que lê o arquivo `data/telemetry_logs.csv` e consolida indicadores de adesão de cadência por diretoria e eNPS agregados.
+- [ ] **Backend:** Criar endpoint `/api/rh/metricas` que lê o banco de dados e arquivos de telemetria, consolidando indicadores de cadência, eNPS, índice de clareza e o Índice de Relevância de Carreira (IRC) geral e por área.
 - [ ] **Backend/IA:** Adicionar rota `/api/rh/alerta-risco` que recebe o motivo do risco reportado pelo gestor de forma 100% anonimizada (PII substituído por `[COLABORADOR]`), classifica-o via Gemini (Carreira, Clima ou Performance) e avalia sua gravidade (Baixa, Média, Alta).
-- [ ] **Frontend:** Integrar o painel `PainelRH.jsx` para carregar dados via chamadas de API reais ao backend FastAPI.
+- [ ] **Frontend:** Integrar o painel `PainelRH.jsx` para carregar dados via chamadas de API reais ao backend FastAPI, exibindo o IRC geral, gráfico de evolução do IRC e destacando líderes com pontuação crítica (<70%) em cor vermelha suave/alerta.
+
 - [ ] **Frontend:** Adicionar o checkbox voluntário de "Reportar colaborador em risco" no fechamento da ata, salvando a associação nominal no `localStorage` privado e enviando o motivo mascarado para classificação na API de IA.
 - [ ] **Frontend:** Implementar cálculo de "Colaboradores Descobertos" (>30 dias sem ata) comparando timestamps diretamente na Dashboard do RH e disponibilizar gatilho de lembrete.
 
@@ -219,4 +264,24 @@ Para sanar todos os gaps listados em `docs/onion-gap-analysis.md` de forma organ
 
 #### Checklist de Ações:
 - [ ] **Frontend:** Integrar botão e gatilho visual para compartilhamento rápido por e-mail ou link de Teams contendo a ata gerada após o download do PDF.
-- [ ] **Frontend:** Implementar redirecionamento automático do usuário após a conclusão da ata para a tela "Meu Squad" ou "Meu Perfil", garantindo um fluxo fluído de UX.
+- [ ] **Frontend:** Implementar placeholders/guias editáveis com os 5 blocks da ClearIT em marca d'água cinza clara (`text-slate-300 / dark:text-slate-700`) no campo de anotações do líder (`Home.jsx` / `Meus1a1.jsx`).
+- [ ] **Frontend:** Implementar redirecionamento automático do usuário após a conclusão da ata para a tela "Meu Squad" ou "Meu Perfil", garantindo um fluxo fluído de UX.
+
+
+---
+
+### Fase 7: Evolução Agent-First (F-18, F-19, F-20, F-21, F-22, F-23)
+*Garante a transição do portal reativo para um ecossistema ativo de orquestração proativa e interações headless com autenticação baseada em perfis.*
+
+#### Arquivos Afetados:
+- Backend: [main.py](file:///c:/Users/Pulse%20Mais/24+1/SmartLeading-ClearIT/backend/app/main.py), [gemini.py](file:///c:/Users/Pulse%20Mais/24+1/SmartLeading-ClearIT/backend/app/core/gemini.py)
+- Frontend: [Home.jsx](file:///c:/Users/Pulse%20Mais/24+1/SmartLeading-ClearIT/frontend/src/views/Home.jsx), [Meus1a1.jsx](file:///c:/Users/Pulse%20Mais/24+1/SmartLeading-ClearIT/frontend/src/views/Meus1a1.jsx)
+
+#### Checklist de Ações:
+- [ ] **Backend (F-18):** Desenvolver gerador de schemas Adaptive Cards (JSON) no FastAPI para interações no Teams/E-mail.
+- [ ] **Backend (F-19):** Criar rota `/api/multimodal/ocr` integrando a API de visão do Gemini para transcrever imagens de anotações físicas de reuniões.
+- [ ] **Backend (F-20):** Implementar arquitetura multi-agente em [gemini.py](file:///c:/Users/Pulse%20Mais/24+1/SmartLeading-ClearIT/backend/app/core/gemini.py) dividindo o raciocínio entre o Agente de Carreira e o Agente de Clima.
+- [ ] **Backend & Frontend (F-21):** Substituir campos de entrada da SPA por uma caixa de prompt único. No backend, validar os insumos contra os 5 blocos obrigatórios de 1:1 e expor a lista de `alertas_blocos` para lacunas não preenchidas.
+- [ ] **Backend (F-22):** Implementar webhook `/api/webhooks/valida-rito` para processar a validação bilateral sem exigir acesso à SPA React, alterando os registros no PostgreSQL.
+- [ ] **Backend (F-23):** Implementar middleware de autenticação (JWT / Role Validation) nos endpoints do FastAPI, impedindo acesso cruzado de APIs (ex: liderados acessando rotas de RH).
+
