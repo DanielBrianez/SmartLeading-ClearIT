@@ -79,7 +79,76 @@ else:
 
 ---
 
-## 4. Armadilhas (Gotchas)
+## 4. Fluxo do Prompt do Gestor e Coleta do LocalStorage
+
+Em vez de o líder preencher vários campos estruturados na interface de preparação de 1:1, a plataforma adota o conceito de "Redução de Formulários", oferecendo apenas uma caixa de entrada de prompt livre: 
+
+> 💬 *"Sobre o que você deseja conversar com [Colaborador] hoje?"*  
+> *Exemplo: "Quero falar sobre a promoção do Carlos e cobrar o PDI de AWS"*
+
+```mermaid
+graph TD
+    UserInput[Líder digita: Falar sobre promoção do Carlos] --> Match[1. Match de Nome no Squad]
+    Match --> QueryLS[2. Query local no localStorage]
+    QueryLS --> BuildPayload[3. Montagem do Payload de Contexto]
+    BuildPayload --> API[4. POST /api/gerar-roteiro]
+    API --> Gemini[5. Gemini cruza Intenção + Contexto + Levels]
+    Gemini --> Render[6. Exibe Roteiro Inteligente na UI]
+```
+
+### A. O que o sistema busca no LocalStorage?
+Ao identificar que o rito é com o liderado **Carlos** (ID `101`), o frontend executa buscas sob as seguintes chaves do `localStorage`:
+*   **`@clearit-atas-squad` (Últimas Atas):** Extrai o bloco de *"Acordos e Próximos Passos"* da última ata registrada para puxar os combinados passados.
+*   **`@clearit-pdi` (PDIs ativos):** Busca as metas de desenvolvimento de carreira que estão em andamento e seus prazos.
+*   **`@clearit-tasks` (Checklist de Ações Micro):** Filtra tarefas que ficaram com status *"pendente"* ou *"expirada"*.
+
+### B. Payload de Contexto enviado ao Backend
+O frontend empacota a intenção do líder e o histórico coletado no JSON abaixo e envia à API:
+
+```json
+{
+  "lideradoId": "101",
+  "nomeLiderado": "Carlos Eduardo",
+  "cargo": "Engenheiro Front-end Pleno",
+  "direcionamentoLider": "Quero falar sobre a promoção do Carlos e cobrar o PDI de AWS",
+  "contextoHistorico": {
+    "acordosAtaAnterior": [
+      { "descricao": "Refatorar componente de Login", "status": "concluida" },
+      { "descricao": "Atualizar documentação do Storybook", "status": "expirada" }
+    ],
+    "pdiAtivo": [
+      { "acao": "Finalizar curso de React Avançado", "prazo": "10/07/2026", "status": "Em andamento" }
+    ]
+  }
+}
+```
+
+### C. Prompt gerado pelo Backend (FastAPI) para a IA
+O FastAPI recebe o JSON, anexa as regras da metodologia de liderança e a matriz de Levels da ClearIT e monta o prompt final para o Gemini:
+
+```text
+Você é o copiloto de liderança Smart Leading (ClearIT).
+O líder Daniel Nascimento iniciou a preparação de uma 1:1 com Carlos Eduardo (Engenheiro Front-end Pleno).
+
+INTENÇÃO DE FOCO DO GESTOR:
+"Quero falar sobre a promoção do Carlos e cobrar o PDI de AWS"
+
+HISTÓRICO DO COLABORADOR (Extraído do localStorage):
+- Acordos Anteriores: Concluiu "Refatorar login", mas a tarefa "Atualizar storybook" expirou.
+- PDI Ativo: "Finalizar curso de React Avançado" (Prazo: 10/07/2026 - Em andamento).
+
+DIRETRIZ DA MATRIZ DE LEVELS (ClearIT):
+Para promoção para Sênior, o colaborador precisa demonstrar competências de "Arquitetura Limpa" e "Liderança Técnica em projetos front-end".
+
+INSTRUÇÕES PARA O ROTEIRO:
+1. Monte um roteiro de 5 blocos (Metodologia ClearIT).
+2. No bloco de Desenvolvimento/Carreira, sugira 2 perguntas específicas baseadas na transição de Pleno para Sênior para ajudar o líder a validar se o Carlos já cumpre os requisitos de promoção.
+3. No bloco de Status, inclua um lembrete para cobrar a tarefa expirada de storybook.
+```
+
+---
+
+## 5. Armadilhas (Gotchas)
 
 > [!WARNING]
 > **Quebra de codificação Latin-1:** O método `encode('latin-1', 'ignore')` remove emojis silenciosamente para evitar que o FPDF quebre a execução. Contudo, ele também removerá aspas inteligentes (`“` e `”`) ou travessões (`—`) se eles não estiverem na tabela Latin-1. Certifique-se de que os prompts orientem a IA a usar apenas caracteres ASCII/Latin-1 padrão.
