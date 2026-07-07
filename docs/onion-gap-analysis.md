@@ -50,6 +50,22 @@ A análise anterior referenciava arquivos de uma aplicação Streamlit em Python
 *   **Código Atual:**
     *   **Incompatibilidade de Caminho de Log:** O backend grava o log em `backend/logs/smart_leading_logs.csv` (caminho local relativo `logs/smart_leading_logs.csv`) em vez do caminho padronizado `data/telemetry_logs.csv` esperado no escopo de conformidade de dados do projeto.
 
+### F-18 a F-22: Omnicanalidade, IA Avançada (Vision/OCR/Multi-Agent) & Validação Omnichannel
+*   **Especificação Ideal:** O ecossistema suporta interações headless via MS Teams/E-mail (F-18, F-22), transcrição de áudio e leitura de anotações físicas via visão/OCR do Gemini (F-19), análises orquestradas entre agentes de carreira e clima (F-20), e preenchimento por prompt único com alertas de lacunas nos 5 blocos da 1:1 (F-21).
+*   **Código Atual:**
+    *   **Não Implementados:** Nenhuma dessas integrações corporativas, fluxos de imagem, orquestradores de rede de agentes ou processamento de prompt reduzido com busca no `localStorage` estão implementados no frontend ou backend. O sistema é baseado em interações e formulários de texto padrão.
+
+### F-23: Autenticação Baseada em Perfis (Role-Based Login)
+*   **Especificação Ideal:** Tela de login obrigatória na SPA React exigindo e-mail e senha de teste:
+    *   `lider@clearit.com` (Senha: `lider123` / role: `lider`)
+    *   `liderado@clearit.com` (Senha: `liderado123` / role: `liderado`)
+    *   `rh@clearit.com` (Senha: `rh123` / role: `rh`)
+    Isolamento completo das rotas/abas com base no papel através de `AuthContext` no frontend e validações de token no backend FastAPI.
+*   **Código Atual:**
+    *   **Ausência de Autenticação:** A SPA abre diretamente na página inicial sem bloqueio de login ou tela de credenciais.
+    *   **Acoplamento de Usuário Estático:** O perfil do líder `"daniel_nascimento"` é carregado de forma fixa e hardcoded no frontend.
+    *   **Sem Proteção de Rotas (RBAC Inexistente):** O menu de navegação exibe todas as abas indistintamente (incluindo o Painel do RH) para qualquer usuário, sem filtros ou bloqueios de URL. Faltam middlewares de validação de papéis no backend FastAPI.
+
 ---
 
 ## 🎯 3. Resumo de Divergências nas Regras de Negócio
