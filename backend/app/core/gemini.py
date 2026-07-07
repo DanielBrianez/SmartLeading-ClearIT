@@ -60,28 +60,30 @@ def gerar_roteiro_ia(dados: dict) -> str:
         Você deve dividir sua resposta em duas partes, usando formatação Markdown. Separe-as EXATAMENTE por esta tag: --- ATA OFICIAL ---
 
         ### PARTE 1: ROTEIRO DO LÍDER (Confidencial)
-        - OBRIGATÓRIO: O "Desenvolvimento da Pauta" DEVE ser 100% focado neste assunto: "{entregas}".
-        - Você DEVE estruturar a abordagem de feedback utilizando a Metodologia CRIA, dividindo em 4 tópicos com bullet points:
-          * [C] Contexto: Descreva a situação específica relatada nas entregas, sem generalizar.
-          * [R] Redirecionamento: O que precisa mudar ou ser mantido/reforçado na atitude ou entrega técnica.
-          * [I] Impacto: Como essa atitude/entrega afeta o projeto, o squad e os resultados da Clear IT.
-          * [A] Alinhar: Sugestões de perguntas para o líder fazer ao liderado para construir um acordo ou plano de ação.
-        - Dê breves dicas de postura baseadas no perfil do Líder ({perfil_lider}).
+        Você deve estruturar o roteiro seguindo obrigatoriamente os 5 blocos da ClearIT, adaptando os conselhos ao perfil do líder ({perfil_lider}) e à senioridade ({senioridade}):
+
+        1. 🌱 **Check-in Humano (Sentimento/Bem-estar):** Dicas e sugestões de perguntas baseadas no estado comportamental/emocional do liderado ({perfil_comportamental}) para iniciar o rito com empatia.
+        2. 🎯 **Pauta do Liderado (Tópico do Colaborador):** Orientações para o líder abrir espaço e ouvir ativamente os assuntos que o liderado deseja trazer.
+        3. 🚧 **Obstáculos e Impedimentos (Desafios/Bloqueios):** Diretrizes para o líder mapear bloqueios técnicos, de processos ou de relacionamento que estejam travando o dia a dia.
+        4. 🚀 **Desenvolvimento e Carreira (Levels/PDI) - Metodologia CRIA:** Espaço para feedback baseado em "{entregas}". Aqui você DEVE obrigatoriamente aplicar a metodologia CRIA, detalhando:
+           * **[C] Contexto:** Descreva a situação real das entregas sem generalizações.
+           * **[R] Redirecionamento:** O que precisa de ajuste ou reforço técnico/comportamental, calibrado pela senioridade.
+           * **[I] Impacto:** Como essas ações afetam a Clear IT, o time e o negócio.
+           * **[A] Alinhamento:** Sugestões de perguntas abertas para o gestor pactuar compromissos de evolução.
+        5. 🤝 **Acordos e Próximos Passos (Recapitulação):** Dicas para definir e formalizar combinados acionáveis sobre a carreira e metas.
 
         --- ATA OFICIAL ---
 
         RESUMO DO ALINHAMENTO
         - Escreva de forma formal, impessoal e corporativa.
         - Comece OBRIGATORIAMENTE com: "Nesta reunião de alinhamento, conversamos sobre os seguintes tópicos..."
-        - Faça o resumo profissional focado em: {entregas}. Crie sugestões de acordos firmados.
+        - Faça o resumo profissional focado em: {entregas}. Crie sugestões de acordos firmados baseados na conversa.
 
         DIRETRIZ DE FRAMEWORK DE LEVELS (CLEAR IT):
         Ao gerar o roteiro, adapte a cobrança com base na senioridade:
-
         - Júnior/Trainee: Foco em execução guiada e aprendizado técnico.
         - Pleno: Foco em autonomia, qualidade de entrega e visão de ponta a ponta.
         - Sênior/Especialista: Foco em mentoria, arquitetura, impacto no negócio e liderança técnica.
-
         """
 
         response = model.generate_content(prompt)
