@@ -69,8 +69,44 @@ export default function Home({ setAbaAtiva }) {
 
   const patente = metricas.xp >= 3000 ? 'Líder Referência 💎' : 'Líder Engajado 🚀';
 
+  const formatarDataISO = (data) => {
+    const ano = data.getFullYear();
+    const mes = String(data.getMonth() + 1).padStart(2, '0');
+    const dia = String(data.getDate()).padStart(2, '0');
+    return `${ano}-${mes}-${dia}`;
+  };
+
   const iniciarReuniao = (idLiderado) => {
     localStorage.setItem('@clearit-liderado-foco', idLiderado);
+
+    let squads = lerLGPD('@clearit-squad') || [];
+    if (squads.length === 0) squads = DB_SQUADS[idLider] || [];
+
+    const index = squads.findIndex(m => m.id.toString() === idLiderado.toString());
+    if (index !== -1) {
+      const hoje = new Date();
+      const dataHoje = formatarDataISO(hoje);
+      squads[index].ultimaReuniao = dataHoje;
+      squads[index].proxima_reuniao = dataHoje;
+      salvarLGPD('@clearit-squad', squads);
+    }
+
+    const liderado = squad.find(m => m.id.toString() === idLiderado.toString()) || null;
+    const nomeLiderado = liderado?.nome || 'o colaborador';
+    const notificacoesSalvas = lerLGPD('@clearit-notificacoes') || [];
+
+    notificacoesSalvas.unshift({
+      id: Date.now(),
+      target: 'LIDER',
+      titulo: '1:1 iniciada',
+      mensagem: `${nomeLiderado} teve a reunião reagendada para hoje.`,
+      tempo: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      lida: false
+    });
+
+    salvarLGPD('@clearit-notificacoes', notificacoesSalvas);
+    window.dispatchEvent(new Event('notificacao-atualizada'));
+
     if (setAbaAtiva) setAbaAtiva('1a1');
   };
 

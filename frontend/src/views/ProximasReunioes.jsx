@@ -7,7 +7,7 @@ import {
 import { DB_SQUADS } from '../dados';
 import { lerLGPD, salvarLGPD } from '../utils/security';
 
-export default function ProximasReunioes({ onPlanejar }) {
+export default function ProximasReunioes({ onPlanejar, setAbaAtiva }) {
   const idLiderLogado = "daniel_nascimento";
   
   const [adiadas, setAdiadas] = useState(() => lerLGPD('@clearit-reunioes-adiadas') || {});
@@ -96,26 +96,71 @@ export default function ProximasReunioes({ onPlanejar }) {
     mostrarBalao(`Reunião com ${membro.nome.split(' ')[0]} adiada em +7 dias!`, 'alerta');
   };
 
+  const formatarDataISO = (data) => {
+    const ano = data.getFullYear();
+    const mes = String(data.getMonth() + 1).padStart(2, '0');
+    const dia = String(data.getDate()).padStart(2, '0');
+    return `${ano}-${mes}-${dia}`;
+  };
+
+  const finalizarPlanejamento = (membro) => {
+    localStorage.setItem('@clearit-liderado-foco', membro.id);
+
+    const hoje = new Date();
+    const dataHoje = formatarDataISO(hoje);
+    const proxima = new Date(hoje);
+    proxima.setDate(hoje.getDate() + 15);
+    const proximaData = formatarDataISO(proxima);
+
+    let squadGeral = lerLGPD('@clearit-squad') || [];
+    if (squadGeral.length === 0) squadGeral = DB_SQUADS[idLiderLogado] || [];
+
+    const index = squadGeral.findIndex(item => item.id.toString() === membro.id.toString());
+    if (index !== -1) {
+      squadGeral[index].ultimaReuniao = dataHoje;
+      squadGeral[index].proxima_reuniao = proximaData;
+      salvarLGPD('@clearit-squad', squadGeral);
+    }
+
+    const novasAdiadas = { ...adiadas };
+    delete novasAdiadas[membro.id];
+    delete novasAdiadas[membro.id.toString()];
+    setAdiadas(novasAdiadas);
+    salvarLGPD('@clearit-reunioes-adiadas', novasAdiadas);
+
+    const notificacoesSalvas = lerLGPD('@clearit-notificacoes') || [];
+    notificacoesSalvas.unshift({
+      id: Date.now(),
+      target: 'LIDER',
+      titulo: '1:1 iniciada',
+      mensagem: `${membro.nome.split(' ')[0]} teve a reunião reagendada para hoje.`,
+      tempo: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      lida: false
+    });
+    salvarLGPD('@clearit-notificacoes', notificacoesSalvas);
+    window.dispatchEvent(new Event('notificacao-atualizada'));
+
+    if (onPlanejar) onPlanejar(membro.id);
+    if (setAbaAtiva) setAbaAtiva('1a1');
+
+    mostrarBalao(`${membro.nome.split(' ')[0]} encaminhado para a 1:1 de hoje.`, 'sucesso');
+  };
+
   const handlePlanejarLocal = (membro) => {
     if (membro.status === 'adiadas') {
-      // Abre o Modal Premium ao invés do window.confirm
       setModalConfirmacao(membro);
       return;
     }
-    
-    onPlanejar(membro.id);
+
+    finalizarPlanejamento(membro);
   };
 
   const confirmarPlanejamentoAdiada = () => {
     const membro = modalConfirmacao;
-    
-    const novasAdiadas = { ...adiadas };
-    delete novasAdiadas[membro.id];
-    setAdiadas(novasAdiadas);
-    salvarLGPD('@clearit-reunioes-adiadas', novasAdiadas);
+    if (!membro) return;
 
     setModalConfirmacao(null);
-    onPlanejar(membro.id);
+    finalizarPlanejamento(membro);
   };
 
   const formatarExibicao = (dataObj) => {

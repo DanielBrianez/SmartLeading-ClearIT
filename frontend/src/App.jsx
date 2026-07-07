@@ -238,7 +238,7 @@ export default function App() {
             )}
             {activeTab === '1a1' && user.role === 'LIDER' && <Meus1a1 setAbaAtiva={setActiveTab} />}
             {activeTab === 'squad' && user.role === 'LIDER' && <MeuSquad />}
-            {activeTab === 'reunioes' && user.role === 'LIDER' && <ProximasReunioes />}
+            {activeTab === 'reunioes' && user.role === 'LIDER' && <ProximasReunioes setAbaAtiva={setActiveTab} />}
             {activeTab === 'ranking' && user.role === 'LIDER' && <Ranking />}
             {activeTab === 'painel' && user.role === 'RH' && <PainelRH />}
             {activeTab === 'playbook' && <Playbook />}

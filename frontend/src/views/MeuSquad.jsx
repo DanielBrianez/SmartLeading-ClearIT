@@ -49,7 +49,7 @@ export default function MeuSquad({ setAbaAtiva }) {
 
       const timeAtualizado = squadAtual.map(membro => {
         const atasDoMembro = atas.filter(a => a.idLiderado === membro.id.toString());
-        let dataReal = membro.ultimaReuniao;
+        let dataReal = membro.ultimaReuniao || membro.proxima_reuniao || null;
         if (atasDoMembro.length > 0) {
           const partes = atasDoMembro[0].data.split('/');
           if(partes.length === 3) dataReal = `${partes[2]}-${partes[1]}-${partes[0]}`;
@@ -68,6 +68,32 @@ export default function MeuSquad({ setAbaAtiva }) {
     window.addEventListener('clearit-data-updated', carregarDados);
     return () => window.removeEventListener('clearit-data-updated', carregarDados);
   }, []);
+
+  useEffect(() => {
+    if (!membroSelecionado) return;
+
+    const membroAtualizado = squad.find(m => m.id.toString() === membroSelecionado.id.toString());
+    if (!membroAtualizado) return;
+
+    const atasDoMembro = todasAtas.filter(a => a.idLiderado === membroSelecionado.id.toString());
+    const idLoginFalback = membroAtualizado.nome.toLowerCase().replace(' ', '_');
+    const momento = localStorage.getItem(`@clearit-momento-${membroAtualizado.id}`) ||
+                    localStorage.getItem(`@clearit-momento-${idLoginFalback}`) ||
+                    'Aguardando preenchimento...';
+
+    const pdis = getPdiDoMembro(membroAtualizado.id);
+    const tasks = getTasksDoMembro(membroAtualizado.id);
+
+    setHistoricoAtas(atasDoMembro);
+    setMembroSelecionado({
+      ...membroAtualizado,
+      totalPdis: pdis.length,
+      pdisAtivos: pdis.filter(p => p.status !== 'Concluído').length,
+      totalTasks: tasks.length,
+      tasksPendentes: tasks.filter(t => t.status !== 'Concluído').length,
+      momento
+    });
+  }, [squad, todasAtas]);
 
   const mostrarBalao = (mensagem) => {
     setBalaoAviso({ visivel: true, mensagem });

@@ -252,14 +252,19 @@ ${textoLimpo}
     const indexMembro = squads.findIndex(m => m.id.toString() === lideradoSelecionado.id.toString());
     
     if (indexMembro !== -1) {
-      const novaData = new Date();
-      novaData.setDate(novaData.getDate() + 15);
-      
-      const ano = novaData.getFullYear();
-      const mes = String(novaData.getMonth() + 1).padStart(2, '0');
-      const dia = String(novaData.getDate()).padStart(2, '0');
-      
-      squads[indexMembro].proxima_reuniao = `${ano}-${mes}-${dia}`;
+      const hoje = new Date();
+      const proxima = new Date(hoje);
+      proxima.setDate(hoje.getDate() + 15);
+
+      const formatarData = (data) => {
+        const ano = data.getFullYear();
+        const mes = String(data.getMonth() + 1).padStart(2, '0');
+        const dia = String(data.getDate()).padStart(2, '0');
+        return `${ano}-${mes}-${dia}`;
+      };
+
+      squads[indexMembro].ultimaReuniao = formatarData(hoje);
+      squads[indexMembro].proxima_reuniao = formatarData(proxima);
       salvarLGPD('@clearit-squad', squads);
     }
 
