@@ -1,36 +1,38 @@
-# 🚀 Smart Leading V2 - Clear IT
+# 🚀 Smart Leading V2 - Clear IT (Agent-First Edition)
 
-O **Smart Leading** é um ecossistema corporativo de assistência à liderança focado em estruturar, gerenciar e gamificar reuniões de 1:1 (One-on-One). Utilizando inteligência artificial paramétrica, o sistema gera roteiros de alinhamento altamente personalizados baseados no perfil do líder, senioridade do liderado e comportamento recente.
+O **Smart Leading** é um ecossistema corporativo de assistência à liderança focado em estruturar, gerenciar e gamificar reuniões de 1:1 (One-on-One) sob o paradigma **Agent-First**. Em vez de ser apenas um sistema passivo de registros (System of Record), a plataforma atua como um "Guardião de Carreira" inteligente.
 
-Além de gerar pautas estruturadas, o sistema emite atas automatizadas em PDF, 100% em conformidade com a LGPD (anonimizadas e restritas ao cliente), e conta com um sistema de ranqueamento gamificado e um dashboard analítico para o RH.
+Utilizando inteligência artificial paramétrica aliada a um **Semantic Firewall** (LGPD by Design), o sistema gera roteiros de alinhamento altamente personalizados. A plataforma fecha o "Ciclo de Ouro" da governança corporativa: o Líder planeja com IA, o Liderado avalia o rito, o sistema distribui XP automaticamente e o RH monitora a saúde organizacional em tempo real.
 
 ---
 
-## ✨ Principais Funcionalidades
+## ✨ Principais Funcionalidades (O Ciclo de Ouro)
 
-- **🧠 Motor de IA (Metodologia CRIA):** Geração de pautas via API do Google Gemini (1.5 Flash) estruturadas nas verticais de Contexto, Redirecionamento, Impacto e Alinhamento.
-- **📊 People Analytics (Painel do RH):** Dashboard gerencial interativo (estilo Power BI) para monitoramento em tempo real de adoção da liderança, volume de ritos, PDIs ativos e simulador preditivo de eNPS.
-- **🎯 Gestão Ativa de Squad:** Radar de próximas reuniões com sistema inteligente de adiamentos e "Cross-Routing" que preenche dados automaticamente.
-- **📄 Atas Seguras (LGPD):** Geração de documentos PDF no lado do cliente (client-side) operando sob a premissa de *Zero PII* no banco de dados.
-- **🏆 Motor de Maturidade (Liga de Ouro):** Sistema de ranqueamento dinâmico que classifica líderes em níveis (Iniciante a Referência) com base em drivers reais: XP, Atas, PDIs e Ritos.
-- **🌓 UI/UX Premium:** Interface responsiva com suporte nativo a temas Claro/Escuro, notificações em tempo real e nuggets comportamentais dinâmicos.
+*   **🛡️ Semantic Firewall (LGPD by Design):** Antes de qualquer dado ser enviado à API de Inteligência Artificial, o motor Client-Side varre e anonimiza CPFs, Valores Financeiros (Salários), Telefones e E-mails, trocando-os por tags seguras (Ex: `[SALÁRIO_PROTEGIDO]`).
+*   **🧠 Motor de IA (Metodologia CRIA):** Geração de pautas via API do Google Gemini estruturadas nas verticais de Contexto, Redirecionamento, Impacto e Alinhamento, com "Nuggets" de mentoria ocultos baseados no perfil do líder.
+*   **🔄 Governança Bilateral de XP:** O Líder não ganha pontos apenas por gerar a ata. O XP só é liberado após o Liderado acessar seu próprio portal e avaliar a 1:1 (Nota de 1 a 5 e Relevância), garantindo qualidade real e evitando o microgerenciamento fantasma.
+*   **🎯 PDI SMART & Trava de Foco:** O sistema força a criação de metas em horizontes de tempo específicos (Sprint, Quarter, Semestre) e **limita a 3 PDIs ativos por pessoa**, garantindo foco real. Já as missões táticas (Tasks/Acordos) são ilimitadas.
+*   **🏆 Liga de Ouro (Gamificação Global):** Ranking de liderança dinâmico e gamificado. Os líderes competem por XP e evoluem em patentes (Bronze, Prata, Ouro e Diamante) baseados na consistência das suas 1:1s e na nota dos liderados.
+*   **📊 People Analytics & Relatório DRE:** O RH possui um painel "Visão de Deus" que monitora o Compliance de Cadência (1:1s em atraso) e calcula o Risco de Burnout cruzando o "Termômetro de Sentimento" de toda a empresa. Gera o **DRE (Demonstrativo de Resultado de Engajamento)** em PDF formato executivo com apenas 1 clique.
+*   **📚 Playbook do Líder:** Uma central de microlearning imersiva (estilo Netflix) com guias rápidos e frameworks para o líder consultar em situações difíceis (ex: Como aplicar um PIP, Sinais de Burnout).
+*   **🌓 UI/UX Premium (Glassmorphism):** Interface responsiva, moderna, com suporte nativo a temas Claro/Escuro, modais interativos, "Toasts" de notificação e barras de progresso dinâmicas.
 
 ---
 
 ## 🛠️ Stack Tecnológica
 
 ### Front-end
-- **React (Vite):** Arquitetura base em componentes funcionais.
-- **Tailwind CSS:** Estilização utilitária e componentes visuais puros (bar charts/progress bars).
-- **Lucide React:** Biblioteca de ícones minimalistas.
-- **html2pdf.js:** Geração de relatórios PDF fiéis à interface local.
-- **React Markdown:** Renderização segura da saída da IA.
+*   **React (Vite):** Arquitetura base em componentes funcionais e hooks.
+*   **Tailwind CSS:** Estilização utilitária e componentes visuais avançados (Glassmorphism, progress bars dinâmicos, gradients).
+*   **Lucide React:** Biblioteca de ícones minimalistas.
+*   **html2pdf.js:** Geração de relatórios PDF fiéis à interface (Client-Side) para Atas e Relatórios DRE do RH.
+*   **React Markdown:** Renderização segura e padronizada da saída da IA.
 
 ### Back-end
-- **Python 3+**
-- **FastAPI:** Motor do servidor de altíssima performance.
-- **Google Generative AI:** Integração com LLM (Gemini 3.1 Flash Lite).
-- **Pydantic:** Validação estrita de dados na API.
+*   **Python 3+**
+*   **FastAPI:** Motor do servidor de altíssima performance.
+*   **Google Generative AI:** Integração com LLM (Gemini 1.5 Flash).
+*   **Pydantic:** Validação estrita de dados na API.
 
 ---
 
@@ -46,7 +48,7 @@ smart-leading-v2/
 │   └── requirements.txt   # Dependências do Python
 │
 ├── frontend/              # Interface do Usuário (UI/UX)
-│   ├── src/               # Código fonte (Views, Components, Routing)
+│   ├── src/               # Código fonte (Views, Components, Routing, Utilities)
 │   ├── package.json       # Dependências do Node.js
 │   └── tailwind.config.js # Regras de estilo corporativo
 │
@@ -54,84 +56,56 @@ smart-leading-v2/
 ├── business-context-lite.md  # Documentação de Produto (Dores e Soluções)
 └── technical-context-lite.md # Documentação de Engenharia e Diagrama Mermaid
 
-```
-
----
-
-## 🚀 Como Rodar o Projeto Localmente
+##🚀 Como Rodar o Projeto Localmente
 
 Para rodar o Smart Leading, você precisará inicializar o Back-end e o Front-end em terminais separados.
 
-### Passo 1: Inicializando o Back-end (Python/FastAPI)
+Passo 1: Inicializando o Back-end (Python/FastAPI)
+Abra o terminal e navegue até a pasta do servidor:
 
-1. Abra o terminal e navegue até a pasta do servidor:
-
-```bash
+Bash
 cd backend
+Crie e ative um ambiente virtual (Recomendado):
 
-```
-
-2. Crie e ative um ambiente virtual (Recomendado):
-
-```bash
+Bash
 # No Windows:
 python -m venv venv
 .\venv\Scripts\activate
+Instale as dependências:
 
-```
-
-3. Instale as dependências:
-
-```bash
+Bash
 pip install -r requirements.txt
+Configure as variáveis de ambiente:
 
-```
+Crie um arquivo chamado .env na raiz da pasta backend/.
 
-4. Configure as variáveis de ambiente:
+Adicione sua chave de API do Gemini:
+GEMINI_API_KEY="SUA_CHAVE_AQUI"
 
-* Crie um arquivo chamado `.env` na raiz da pasta `backend/`.
-* Adicione sua chave de API do Gemini:
-`GEMINI_API_KEY="SUA_CHAVE_AQUI"`
+Rode o servidor:
 
-5. Rode o servidor:
-
-```bash
+Bash
 uvicorn app.main:app --reload
+A API estará rodando em: http://localhost:8000
 
-```
+Passo 2: Inicializando o Front-end (React/Vite)
+Abra um novo terminal e navegue até a pasta da interface:
 
-*A API estará rodando em: `http://localhost:8000*`
-
-### Passo 2: Inicializando o Front-end (React/Vite)
-
-1. Abra um **novo terminal** e navegue até a pasta da interface:
-
-```bash
+Bash
 cd frontend
+Instale as dependências do Node:
 
-```
-
-2. Instale as dependências do Node:
-
-```bash
+Bash
 npm install
+Inicie o servidor de desenvolvimento:
 
-```
-
-3. Inicie o servidor de desenvolvimento:
-
-```bash
+Bash
 npm run dev
+O sistema estará disponível em: http://localhost:5173
 
-```
-
-*O sistema estará disponível em: `http://localhost:5173*`
-
-> **Dica de Desenvolvimento:** Na aba "Sobre o Sistema", utilize o botão **"Injetar Dados Demo"** para autopopular os cofres locais com 18 dados simulados e visualizar o funcionamento completo dos gráficos e ranqueamento imediatamente.
-
----
+##💡 Dica de Demonstração (Demo Hack):
+Na visão do Liderado (HomeLiderado.jsx), existe um atalho oculto no rodapé para simular o recebimento de uma ata de 1:1, permitindo demonstrar o fluxo de Feedback e ganho de XP (Governança Bilateral) instantaneamente para bancas avaliadoras.
 
 ## 📜 Licença e Governança
-
-Desenvolvido para uso corporativo interno - **Clear IT**.
-As diretrizes de proteção de dados aplicadas neste projeto seguem os padrões rigorosos exigidos pela LGPD (Isolamento Client-Side). Consulte os arquivos `*-context-lite.md` na raiz do projeto para detalhes sobre arquitetura e negócio.
+Desenvolvido para uso corporativo interno - Clear IT.
+As diretrizes de proteção de dados aplicadas neste projeto seguem os padrões rigorosos exigidos pela LGPD, utilizando mascaramento por RegEx (Semantic Firewall) no lado do cliente (Client-Side) antes de qualquer transmissão externa. Consulte os arquivos *-context-lite.md na raiz do projeto para detalhes profundos sobre a arquitetura e visão de negócio.

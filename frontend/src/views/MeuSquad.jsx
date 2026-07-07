@@ -1,80 +1,82 @@
 // src/views/MeuSquad.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import html2pdf from 'html2pdf.js';
 import ReactMarkdown from 'react-markdown';
 import { 
-  User, Calendar, Target, Zap, Activity, X, 
-  Clock, CalendarPlus, Briefcase, Hash, 
-  CheckCircle2, Circle, AlertCircle, CheckSquare,
-  Download, FileText, TrendingUp, Award, Map as MapIcon, Plus, Trash2, Pencil
+  Users, Search, User, Briefcase, Clock, 
+  Target, ListTodo, TrendingUp, X, Calendar, ChevronRight, 
+  MessageSquare, CalendarPlus, Activity, Zap, CheckCircle2, 
+  Circle, AlertCircle, CheckSquare, Download, FileText, 
+  Award, Map as MapIcon, Plus, Trash2, Pencil, Hash
 } from 'lucide-react';
-import { salvarLGPD, lerLGPD } from '../utils/security';
 import { DB_SQUADS } from '../dados';
+import { salvarLGPD, lerLGPD } from '../utils/security';
 
-export default function MeuSquad() {
+export default function MeuSquad({ setAbaAtiva }) {
   const idLiderLogado = "daniel_nascimento";
-  const meuTimeBase = DB_SQUADS[idLiderLogado] || [];
   
-  const todasAtas = lerLGPD('@clearit-atas-squad') || [];
-  
-  const meuTime = meuTimeBase.map(membro => {
-    const atasDoMembro = todasAtas.filter(a => a.idLiderado === membro.id.toString());
-    let dataReal = membro.ultimaReuniao;
+  // ESTADOS PRINCIPAIS
+  const [squad, setSquad] = useState([]);
+  const [busca, setBusca] = useState('');
+  const [membroSelecionado, setMembroSelecionado] = useState(null);
+  const [abaModal, setAbaModal] = useState('visao_geral');
 
-    if (atasDoMembro.length > 0) {
-      const dataBR = atasDoMembro[0].data; 
-      const partes = dataBR.split('/');
-      if(partes.length === 3) {
-        const [dia, mes, ano] = partes;
-        dataReal = `${ano}-${mes}-${dia}`;
-      }
-    }
-    return { ...membro, ultimaReuniao: dataReal };
-  });
+  // ESTADOS DE DADOS (Historicos, Tasks, PDIs)
+  const [todasAtas, setTodasAtas] = useState([]);
+  const [historicoAtas, setHistoricoAtas] = useState([]);
+  const [ataImprimindo, setAtaImprimindo] = useState(null);
+
+  const [tasksSalvas, setTasksSalvas] = useState([]);
+  const [tasksDeletadas, setTasksDeletadas] = useState([]);
+  const [formTaskVisible, setFormTaskVisible] = useState(false);
+  const [novaTask, setNovaTask] = useState({ nome: '', descricao: '', status: 'pendente', ddl: '' });
+
+  const [pdiSalvos, setPdiSalvos] = useState([]);
+  const [pdiDeletados, setPdiDeletados] = useState([]);
+  const [formPDIVisible, setFormPDIVisible] = useState(false);
+  const [novoPDI, setNovoPDI] = useState({ acao: '', prazo: '', status: 'No prazo' });
 
   // ESTADO: Balãozinho de Aviso
   const [balaoAviso, setBalaoAviso] = useState({ visivel: false, mensagem: '' });
 
+  useEffect(() => {
+    let squadAtual = lerLGPD('@clearit-squad') || [];
+    if (squadAtual.length === 0) squadAtual = DB_SQUADS[idLiderLogado] || [];
+    
+    // Atualiza a 'ultimaReuniao' baseada nas atas reais
+    const atas = lerLGPD('@clearit-atas-squad') || [];
+    setTodasAtas(atas);
+
+    const timeAtualizado = squadAtual.map(membro => {
+      const atasDoMembro = atas.filter(a => a.idLiderado === membro.id.toString());
+      let dataReal = membro.ultimaReuniao;
+      if (atasDoMembro.length > 0) {
+        const partes = atasDoMembro[0].data.split('/');
+        if(partes.length === 3) dataReal = `${partes[2]}-${partes[1]}-${partes[0]}`;
+      }
+      return { ...membro, ultimaReuniao: dataReal };
+    });
+
+    setSquad(timeAtualizado);
+    setTasksSalvas(lerLGPD('@clearit-tasks') || []);
+    setTasksDeletadas(lerLGPD('@clearit-deleted-tasks') || []);
+    setPdiSalvos(lerLGPD('@clearit-pdi') || []);
+    setPdiDeletados(lerLGPD('@clearit-deleted-pdi') || []);
+  }, []);
+
   const mostrarBalao = (mensagem) => {
     setBalaoAviso({ visivel: true, mensagem });
-    setTimeout(() => {
-      setBalaoAviso({ visivel: false, mensagem: '' });
-    }, 4000);
+    setTimeout(() => setBalaoAviso({ visivel: false, mensagem: '' }), 4000);
   };
-  
-  const [lideradoSelecionado, setLideradoSelecionado] = useState(null);
-  const [historicoAtas, setHistoricoAtas] = useState([]);
-  const [ataImprimindo, setAtaImprimindo] = useState(null);
-  const [abaModal, setAbaModal] = useState('visao_geral');
 
-  // ESTADOS: Gerenciamento Dinâmico de Tasks e PDI
-  const [tasksSalvas, setTasksSalvas] = useState(lerLGPD('@clearit-tasks') || []);
-  const [formTaskVisible, setFormTaskVisible] = useState(false);
-  const [novaTask, setNovaTask] = useState({ nome: '', descricao: '', status: 'pendente', ddl: '' });
-
-  const pdisSalvos = lerLGPD('@clearit-pdi') || [];
-  const [formPDIVisible, setFormPDIVisible] = useState(false);
-  const [novoPDI, setNovoPDI] = useState({ acao: '', prazo: '', status: 'No prazo' });
-
-  // ESTADOS: Lixeira Inteligente
-  const [tasksDeletadas, setTasksDeletadas] = useState(lerLGPD('@clearit-deleted-tasks') || []);
-  const [pdiDeletados, setPdiDeletados] = useState(lerLGPD('@clearit-deleted-pdi') || []);
-
-  const handleAbrirModal = (membro) => {
-    setLideradoSelecionado(membro);
-    setAbaModal('visao_geral');
-    setFormTaskVisible(false);
-    setFormPDIVisible(false);
+  // --- MOTORES DE DADOS DINÂMICOS ---
+  const getTasksDoMembro = (idParam) => {
+    const id = idParam || (membroSelecionado ? membroSelecionado.id : null);
+    if (!id) return [];
     
-    const atasDoMembro = todasAtas.filter(a => a.idLiderado === membro.id.toString());
-    setHistoricoAtas(atasDoMembro);
-  };
-
-  // 🔥 AGORA COM O JAVASCRIPT NATIVO FUNCIONANDO PERFEITAMENTE
-  const getTasksDoMembro = () => {
-    if (!lideradoSelecionado) return [];
-    const tasksBase = lideradoSelecionado.tarefas || [];
-    const tasksSalvasDoMembro = tasksSalvas.filter(t => t.idLiderado === lideradoSelecionado.id.toString());
+    const membro = squad.find(m => m.id.toString() === id.toString());
+    const tasksBase = membro?.tarefas || [];
+    const tasksSalvasDoMembro = tasksSalvas.filter(t => t.idLiderado === id.toString());
     const savedTasksMap = new Map(tasksSalvasDoMembro.map(t => [t.id, t]));
     
     const tasksCombinadas = [
@@ -84,20 +86,22 @@ export default function MeuSquad() {
     return tasksCombinadas.filter(t => !tasksDeletadas.includes(t.id));
   };
 
-  const getPdiDoMembro = () => {
-    if (!lideradoSelecionado) return [];
-    const pdiBase = gerarPDI(lideradoSelecionado).planoAcao;
-    const pdiSalvosDoMembro = pdiSalvos.filter(p => p.idLiderado === lideradoSelecionado.id.toString());
+  const getPdiDoMembro = (idParam) => {
+    const id = idParam || (membroSelecionado ? membroSelecionado.id : null);
+    if (!id) return [];
+    
+    const membro = squad.find(m => m.id.toString() === id.toString());
+    const pdiBase = membro ? gerarPDI(membro).planoAcao : [];
+    const pdiSalvosDoMembro = pdiSalvos.filter(p => p.idLiderado === id.toString());
     const savedPdiMap = new Map(pdiSalvosDoMembro.map(p => [p.id, p]));
 
     let pdiCombinados = [
       ...pdiBase.map(p => savedPdiMap.has(p.id) ? savedPdiMap.get(p.id) : p),
       ...pdiSalvosDoMembro.filter(p => !pdiBase.find(bp => bp.id === p.id))
     ];
-    
     pdiCombinados = pdiCombinados.filter(p => !pdiDeletados.includes(p.id));
 
-    // 🔥 VIGIA AUTOMÁTICO DE EXPIRAÇÃO
+    // VIGIA AUTOMÁTICO DE EXPIRAÇÃO
     const hojeTs = Date.now();
     return pdiCombinados.map(p => {
       if (p.dataExpiracaoTs && p.dataExpiracaoTs < hojeTs && p.status !== 'Concluído') {
@@ -107,34 +111,53 @@ export default function MeuSquad() {
     });
   };
 
-  // FUNÇÕES DE SALVAR / EDITAR TASKS
+  // --- AÇÕES DO MODAL ---
+  const abrirPerfil = (membro) => {
+    setAbaModal('visao_geral');
+    setFormTaskVisible(false);
+    setFormPDIVisible(false);
+    
+    const atasDoMembro = todasAtas.filter(a => a.idLiderado === membro.id.toString());
+    setHistoricoAtas(atasDoMembro);
+
+    const idLoginFalback = membro.nome.toLowerCase().replace(' ', '_');
+    const momento = localStorage.getItem(`@clearit-momento-${membro.id}`) || 
+                    localStorage.getItem(`@clearit-momento-${idLoginFalback}`) || 
+                    'Aguardando preenchimento...';
+    
+    const pdis = getPdiDoMembro(membro.id);
+    const tasks = getTasksDoMembro(membro.id);
+
+    setMembroSelecionado({
+      ...membro,
+      totalPdis: pdis.length,
+      pdisAtivos: pdis.filter(p => p.status !== 'Concluído').length,
+      totalTasks: tasks.length,
+      tasksPendentes: tasks.filter(t => t.status !== 'Concluído').length,
+      momento
+    });
+  };
+
+  const fecharPerfil = () => setMembroSelecionado(null);
+
+  // --- FUNÇÕES DE SALVAR / EDITAR / EXCLUIR ---
   const handleSalvarTask = (e) => {
     e.preventDefault(); 
-
-    // Lê todas as tasks REAIS que estão aparecendo na tela agora
     const todasTasksDaTela = getTasksDoMembro();
-    
-    // Conta as ativas (ignorando a que estamos editando agora, para evitar duplicação)
     const outrasAtivas = todasTasksDaTela.filter(t => t.status.toLowerCase() !== 'concluida' && t.id !== novaTask.id);
     
-    // TRAVA DE OURO: Se já tem 3 ativas E você está tentando salvar essa como pendente/expirada, BARRA!
     if (outrasAtivas.length >= 3 && novaTask.status.toLowerCase() !== 'concluida') {
-      mostrarBalao("⚠️ Limite atingido! O Framework da Clear IT foca no essencial. Não crie mais de 3 metas ativas por vez.");
+      mostrarBalao("⚠️ Limite atingido! Não crie mais de 3 metas ativas por vez para manter o foco.");
       return;
     }
     
     let atualizadas = [...tasksSalvas];
-
     if (novaTask.id) {
       const index = atualizadas.findIndex(t => t.id === novaTask.id);
-      if (index !== -1) {
-        atualizadas[index] = { ...novaTask, idLiderado: lideradoSelecionado.id.toString() };
-      } else {
-        atualizadas.push({ ...novaTask, idLiderado: lideradoSelecionado.id.toString() });
-      }
+      if (index !== -1) atualizadas[index] = { ...novaTask, idLiderado: membroSelecionado.id.toString() };
+      else atualizadas.push({ ...novaTask, idLiderado: membroSelecionado.id.toString() });
     } else {
-      const taskCompleta = { ...novaTask, id: `task_${Date.now()}`, idLiderado: lideradoSelecionado.id.toString() };
-      atualizadas.push(taskCompleta);
+      atualizadas.push({ ...novaTask, id: `task_${Date.now()}`, idLiderado: membroSelecionado.id.toString() });
     }
 
     setTasksSalvas(atualizadas);
@@ -143,25 +166,23 @@ export default function MeuSquad() {
     setFormTaskVisible(false);
   };
 
-  // FUNÇÕES DE SALVAR / EDITAR PDI
+  const handleExcluirTask = (idParaExcluir) => {
+    const novasDeletadas = [...tasksDeletadas, idParaExcluir];
+    setTasksDeletadas(novasDeletadas);
+    salvarLGPD('@clearit-deleted-tasks', novasDeletadas);
+  };
+
   const handleSalvarPDI = (e) => {
     e.preventDefault();
-
-    // Lê todos os PDIs REAIS que estão aparecendo na tela agora
     const todosPDIsDaTela = getPdiDoMembro();
-    
-    // Conta os ativos (ignorando o que estamos editando agora)
     const outrosPDIsAtivos = todosPDIsDaTela.filter(p => p.status !== 'Concluído' && p.id !== novoPDI.id);
     
-    // TRAVA DE OURO: Se já tem 3 ativos E você está tentando salvar esse como não concluído, BARRA!
     if (outrosPDIsAtivos.length >= 3 && novoPDI.status !== 'Concluído') {
-      mostrarBalao("🛑 Limite atingido! O PDI da Clear IT foca no essencial. Conclua uma meta ativa antes de criar o 4º passo.");
+      mostrarBalao("🛑 Limite atingido! O PDI foca no essencial. Conclua uma meta ativa antes de criar o 4º passo.");
       return;
     }
 
     let atualizados = [...pdiSalvos];
-
-    // 🔥 CALCULA A DATA FUTURA E O STATUS AUTOMÁTICO
     const dataCalculo = new Date(); 
     let mesesParaAdicionar = 0;
     
@@ -181,14 +202,10 @@ export default function MeuSquad() {
 
     if (novoPDI.id) {
       const index = atualizados.findIndex(p => p.id === novoPDI.id);
-      if (index !== -1) {
-        atualizados[index] = { ...novoPDI, idLiderado: lideradoSelecionado.id.toString() };
-      } else {
-        atualizados.push({ ...novoPDI, idLiderado: lideradoSelecionado.id.toString() });
-      }
+      if (index !== -1) atualizados[index] = { ...novoPDI, idLiderado: membroSelecionado.id.toString() };
+      else atualizados.push({ ...novoPDI, idLiderado: membroSelecionado.id.toString() });
     } else {
-      const pdiCompleto = { ...novoPDI, id: `pdi_${Date.now()}`, idLiderado: lideradoSelecionado.id.toString() };
-      atualizados.push(pdiCompleto);
+      atualizados.push({ ...novoPDI, id: `pdi_${Date.now()}`, idLiderado: membroSelecionado.id.toString() });
     }
 
     setPdiSalvos(atualizados);
@@ -197,30 +214,13 @@ export default function MeuSquad() {
     setFormPDIVisible(false);
   };
 
-  // FUNÇÕES DE ABRIR EDIÇÃO
-  const handleEditarTask = (task) => {
-    setNovaTask({ ...task });
-    setFormTaskVisible(true);
-  };
-
-  const handleEditarPDI = (pdi) => {
-    setNovoPDI({ ...pdi });
-    setFormPDIVisible(true);
-  };
-
-  // FUNÇÕES DE EXCLUIR
-  const handleExcluirTask = (idParaExcluir) => {
-    const novasDeletadas = [...tasksDeletadas, idParaExcluir];
-    setTasksDeletadas(novasDeletadas);
-    salvarLGPD('@clearit-deleted-tasks', novasDeletadas);
-  };
-
   const handleExcluirPDI = (idParaExcluir) => {
     const novasDeletadas = [...pdiDeletados, idParaExcluir];
     setPdiDeletados(novasDeletadas);
     salvarLGPD('@clearit-deleted-pdi', novasDeletadas);
   };
 
+  // --- UTILITÁRIOS ---
   const handleRebaixarAta = (ata) => {
     setAtaImprimindo(ata); 
     setTimeout(() => {
@@ -232,9 +232,7 @@ export default function MeuSquad() {
         html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
-      html2pdf().set(opt).from(elemento).save().then(() => {
-        setAtaImprimindo(null); 
-      });
+      html2pdf().set(opt).from(elemento).save().then(() => setAtaImprimindo(null));
     }, 100);
   };
 
@@ -246,24 +244,23 @@ export default function MeuSquad() {
   };
 
   const calcularProximaReuniaoTexto = (dataUltima) => {
+    if (!dataUltima) return 'Não agendada';
     const data = new Date(dataUltima);
     data.setDate(data.getDate() + 15);
     const dia = String(data.getDate()).padStart(2, '0');
     const mes = String(data.getMonth() + 1).padStart(2, '0');
-    const ano = data.getFullYear();
-    return `${dia}/${mes}/${ano}`;
+    return `${dia}/${mes}/${data.getFullYear()}`;
   };
 
   const gerarLinkGoogleCalendar = (nome, dataUltima) => {
+    if (!dataUltima) return '#';
     const data = new Date(dataUltima);
     data.setDate(data.getDate() + 15); 
     const ano = data.getFullYear();
     const mes = String(data.getMonth() + 1).padStart(2, '0');
     const dia = String(data.getDate()).padStart(2, '0');
     const dataFormatada = `${ano}${mes}${dia}`;
-    const titulo = encodeURIComponent(`Reunião 1:1 - ${nome}`);
-    const detalhes = encodeURIComponent(`Alinhamento quinzenal de desenvolvimento e metas.\n\nGerado via Smart Leading.`);
-    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${titulo}&dates=${dataFormatada}/${dataFormatada}&details=${detalhes}`;
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Reunião 1:1 - ${nome}`)}&dates=${dataFormatada}/${dataFormatada}&details=${encodeURIComponent(`Alinhamento quinzenal de desenvolvimento e metas.\n\nGerado via Smart Leading.`)}`;
   };
 
   const renderIconeTask = (status) => {
@@ -276,135 +273,128 @@ export default function MeuSquad() {
   };
 
   const gerarPDI = (membro) => {
+    const progresso = membro.progresso || { tecnico: 50, engajamento: 50, metas: 50 };
     const proxNivel = membro.senioridade === 'Júnior' ? 'Pleno' : membro.senioridade === 'Pleno' ? 'Sênior' : 'Especialista / Liderança';
     return {
       objetivo: `Evolução para nível ${proxNivel}`,
       foco: `Desenvolvimento de autonomia técnica e visão estratégica do produto.`,
       competencias: [
-        { nome: 'Hard Skills (Técnico)', nivel: membro.progresso.tecnico },
-        { nome: 'Soft Skills (Comunicação/Liderança)', nivel: membro.progresso.engajamento },
-        { nome: 'Processos e Metodologias', nivel: membro.progresso.metas }
+        { nome: 'Hard Skills (Técnico)', nivel: progresso.tecnico },
+        { nome: 'Soft Skills (Liderança)', nivel: progresso.engajamento },
+        { nome: 'Processos e Metas', nivel: progresso.metas }
       ],
       planoAcao: [
         { id: `estatico_pdi_1_${membro.id}`, acao: 'Certificação Técnica Relevante', prazo: 'Q3 2026', status: 'Em andamento' },
-        { id: `estatico_pdi_2_${membro.id}`, acao: 'Mentoria com Tech Lead (Pair Programming)', prazo: 'Mensal', status: 'No prazo' },
+        { id: `estatico_pdi_2_${membro.id}`, acao: 'Mentoria com Tech Lead', prazo: 'Mensal', status: 'No prazo' },
       ]
     };
   };
 
-  const tasksDoMembro = getTasksDoMembro();
-  const pdiDoMembro = getPdiDoMembro();
+  const squadFiltrado = squad.filter(m => m.nome.toLowerCase().includes(busca.toLowerCase()) || m.cargo.toLowerCase().includes(busca.toLowerCase()));
+  const tasksDoModal = getTasksDoMembro();
+  const pdiDoModal = getPdiDoMembro();
 
   return (
-    <div className="max-w-6xl mx-auto animate-[fadeIn_0.4s_ease-out]">
+    <div className="max-w-5xl mx-auto space-y-8 animate-[fadeIn_0.4s_ease-out] pb-10 relative">
       
-      {/* Cabeçalho */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-          <User className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-          Visão Geral do Squad
-        </h2>
-        <p className="text-slate-600 dark:text-slate-400 mt-1">
-          Acompanhe o desenvolvimento contínuo dos seus liderados diretos.
-        </p>
+      {/* HEADER E BUSCA */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            Gestão do Squad
+          </h1>
+          <p className="text-slate-600 dark:text-slate-400 mt-1">Visão 360º de todos os membros do seu time e histórico.</p>
+        </div>
+
+        <div className="relative w-full md:w-72">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search className="h-5 w-5 text-slate-400" />
+          </div>
+          <input
+            type="text"
+            placeholder="Buscar colaborador..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white transition-all shadow-sm"
+          />
+        </div>
       </div>
 
-      {/* Grid de Cards da Equipe */}
+      {/* GRID DE COLABORADORES (NOVA UI) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {meuTime.map((membro) => (
-          <div key={membro.id} className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+        {squadFiltrado.map(membro => (
+          <div key={membro.id} className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1 bg-blue-500 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></div>
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h3 className="font-bold text-lg text-slate-900 dark:text-white">{membro.nome}</h3>
-                <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">{membro.cargo}</p>
+            
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-14 h-14 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-black text-xl border border-blue-200 dark:border-blue-800/50 group-hover:scale-105 transition-transform">
+                {membro.nome.charAt(0)}
               </div>
-              <div className="bg-slate-50 dark:bg-slate-800 p-2 rounded-lg border border-slate-100 dark:border-slate-700">
-                <User className="w-5 h-5 text-slate-400" />
+              <div>
+                <h3 className="font-bold text-slate-900 dark:text-white leading-tight">{membro.nome}</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{membro.cargo}</p>
               </div>
             </div>
-            
-            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-6 bg-slate-50 dark:bg-slate-800/50 p-2 rounded w-fit">
-              <Calendar className="w-4 h-4" />
-              Última 1:1: <span className="font-semibold text-slate-700 dark:text-slate-300">{formatarDataBR(membro.ultimaReuniao)}</span>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between text-xs font-medium mb-1">
-                  <span className="flex items-center gap-1 text-slate-700 dark:text-slate-300"><Activity className="w-3 h-3 text-emerald-500"/> Engajamento</span>
-                  <span className="text-slate-500">{membro.progresso.engajamento}%</span>
-                </div>
-                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2">
-                  <div className="bg-emerald-500 h-2 rounded-full transition-all duration-1000" style={{ width: `${membro.progresso.engajamento}%` }}></div>
-                </div>
+
+            <div className="space-y-2 mb-6">
+              <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-2 rounded-lg border border-slate-100 dark:border-slate-800">
+                <Briefcase className="w-3.5 h-3.5" /> Nível: <span className="font-semibold text-slate-900 dark:text-slate-300">{membro.senioridade}</span>
               </div>
-              <div>
-                <div className="flex justify-between text-xs font-medium mb-1">
-                  <span className="flex items-center gap-1 text-slate-700 dark:text-slate-300"><Zap className="w-3 h-3 text-amber-500"/> Nível Técnico</span>
-                  <span className="text-slate-500">{membro.progresso.tecnico}%</span>
-                </div>
-                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2">
-                  <div className="bg-amber-500 h-2 rounded-full transition-all duration-1000" style={{ width: `${membro.progresso.tecnico}%` }}></div>
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-xs font-medium mb-1">
-                  <span className="flex items-center gap-1 text-slate-700 dark:text-slate-300"><Target className="w-3 h-3 text-blue-500"/> Acordos & Metas</span>
-                  <span className="text-slate-500">{membro.progresso.metas}%</span>
-                </div>
-                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2">
-                  <div className="bg-blue-500 h-2 rounded-full transition-all duration-1000" style={{ width: `${membro.progresso.metas}%` }}></div>
-                </div>
+              <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-2 rounded-lg border border-slate-100 dark:border-slate-800">
+                <Calendar className="w-3.5 h-3.5" /> 1:1: <span className="font-semibold text-slate-900 dark:text-slate-300">{formatarDataBR(membro.ultimaReuniao) || 'Sem dados'}</span>
               </div>
             </div>
-            
+
             <button 
-              onClick={() => handleAbrirModal(membro)}
-              className="w-full mt-6 py-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-slate-700 hover:text-blue-600 text-slate-700 dark:text-slate-300 text-sm font-medium rounded-xl transition-colors border border-slate-200 dark:border-slate-700"
+              onClick={() => abrirPerfil(membro)}
+              className="w-full py-2.5 text-sm font-bold text-blue-600 dark:text-blue-400 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 rounded-xl transition-colors border border-blue-100 dark:border-blue-900/50 flex items-center justify-center gap-2"
             >
-              Ver Perfil Completo
+              Ver Perfil Completo <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         ))}
+        {squadFiltrado.length === 0 && (
+          <div className="col-span-full py-12 text-center text-slate-500 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700">
+            Nenhum colaborador encontrado.
+          </div>
+        )}
       </div>
 
-      {/* MODAL DE PERFIL COMPLETO */}
-      {lideradoSelecionado && (
+      {/* MODAL DE PERFIL COMPLETO (GLASSMORPHISM + FUNÇÕES ANTIGAS) */}
+      {membroSelecionado && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setLideradoSelecionado(null)}></div>
-
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={fecharPerfil}></div>
+          
           <div className="relative w-full max-w-5xl bg-slate-50 dark:bg-slate-950 rounded-2xl shadow-2xl overflow-hidden animate-[fadeIn_0.2s_ease-out] flex flex-col max-h-[90vh]">
             
             {/* Header Fixo do Modal */}
             <div className="flex flex-col border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex-shrink-0">
               <div className="flex justify-between items-center p-6 pb-4">
                 <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400 text-xl font-bold">
-                    {lideradoSelecionado.nome.charAt(0)}
+                  <div className="w-16 h-16 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-black text-2xl shadow-md">
+                    {membroSelecionado.nome.charAt(0)}
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-white">{lideradoSelecionado.nome}</h2>
+                    <h2 className="text-xl font-black text-slate-900 dark:text-white">{membroSelecionado.nome}</h2>
                     <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400 mt-1">
-                      <span className="flex items-center gap-1"><Briefcase className="w-3.5 h-3.5"/> {lideradoSelecionado.cargo}</span>
-                      <span className="flex items-center gap-1"><Hash className="w-3.5 h-3.5"/> ID: {lideradoSelecionado.id}</span>
+                      <span className="flex items-center gap-1"><Briefcase className="w-3.5 h-3.5"/> {membroSelecionado.cargo} • {membroSelecionado.senioridade}</span>
+                      <span className="flex items-center gap-1"><Hash className="w-3.5 h-3.5"/> ID: {membroSelecionado.id}</span>
                     </div>
                   </div>
                 </div>
-                <button 
-                  onClick={() => setLideradoSelecionado(null)}
-                  className="p-2 bg-slate-50 dark:bg-slate-800 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition-colors"
-                >
-                  <X className="w-5 h-5 text-slate-500" />
+                <button onClick={fecharPerfil} className="p-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-full text-slate-600 dark:text-slate-400 transition-colors">
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
+              {/* Abas */}
               <div className="flex px-6 gap-6 text-sm font-bold">
                 <button 
                   onClick={() => setAbaModal('visao_geral')}
                   className={`pb-3 flex items-center gap-2 border-b-2 transition-colors ${abaModal === 'visao_geral' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}
                 >
-                  <Activity className="w-4 h-4" /> Visão Geral
+                  <Activity className="w-4 h-4" /> Visão e Acordos
                 </button>
                 <button 
                   onClick={() => setAbaModal('pdi')}
@@ -415,163 +405,129 @@ export default function MeuSquad() {
               </div>
             </div>
 
-            {/* Corpo Rolável do Modal */}
-            <div className="p-6 overflow-y-auto bg-slate-50 dark:bg-slate-950 flex-1">
+            {/* Corpo Rolável */}
+            <div className="p-6 overflow-y-auto flex-1">
               
-              {/* --- ABA 1: VISÃO GERAL --- */}
+              {/* --- ABA 1: VISÃO GERAL E ACORDOS --- */}
               {abaModal === 'visao_geral' && (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-[fadeIn_0.3s]">
                   
+                  {/* Coluna Esquerda: Info e Sincronia */}
                   <div className="space-y-6 lg:col-span-1">
-                    <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-4">Detalhes do Colaborador</h3>
-                      <div className="space-y-3 text-sm">
-                        <p className="flex justify-between"><span className="text-slate-600 dark:text-slate-400">Senioridade:</span> <span className="font-medium text-slate-900 dark:text-white">{lideradoSelecionado.senioridade}</span></p>
-                        <p className="flex justify-between"><span className="text-slate-600 dark:text-slate-400">Squad:</span> <span className="font-medium text-slate-900 dark:text-white">{lideradoSelecionado.time}</span></p>
-                        <p className="flex justify-between"><span className="text-slate-600 dark:text-slate-400">Tempo de Casa:</span> <span className="font-medium text-slate-900 dark:text-white">{lideradoSelecionado.tempoCasa}</span></p>
+                    
+                    {/* Sincronia de Momento */}
+                    <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/50 p-4 rounded-xl flex items-start gap-4">
+                      <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg text-blue-600 dark:text-blue-400">
+                        <MessageSquare className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-500 mb-1">Status Atual</p>
+                        <p className="font-semibold text-slate-900 dark:text-slate-200 text-sm">{membroSelecionado.momento}</p>
                       </div>
                     </div>
 
-                    <div className="bg-blue-50 dark:bg-blue-900/10 p-5 rounded-xl border border-blue-100 dark:border-blue-900/30 text-center shadow-sm">
-                      <Clock className="w-8 h-8 text-blue-500 mx-auto mb-2" />
-                      <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">Ciclo Quinzenal</p>
-                      <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-4">
-                        Próxima Reunião dia {calcularProximaReuniaoTexto(lideradoSelecionado.ultimaReuniao)}
+                    {/* Cadência */}
+                    <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm text-center">
+                      <Clock className="w-8 h-8 text-purple-500 mx-auto mb-2" />
+                      <p className="text-sm text-purple-600 dark:text-purple-400 font-medium">Ciclo de Mentoria</p>
+                      <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-4 mt-1">
+                        Próxima 1:1 dia {calcularProximaReuniaoTexto(membroSelecionado.ultimaReuniao)}
                       </h4>
                       <a 
-                        href={gerarLinkGoogleCalendar(lideradoSelecionado.nome, lideradoSelecionado.ultimaReuniao)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2.5 px-4 rounded-xl text-sm font-medium transition-all shadow-sm shadow-blue-600/20"
+                        href={gerarLinkGoogleCalendar(membroSelecionado.nome, membroSelecionado.ultimaReuniao)}
+                        target="_blank" rel="noopener noreferrer"
+                        className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white py-2.5 px-4 rounded-xl text-sm font-medium transition-all shadow-sm"
                       >
-                        <CalendarPlus className="w-4 h-4" />
-                        Agendar no Calendário
+                        <CalendarPlus className="w-4 h-4" /> Agendar no Calendário
                       </a>
                     </div>
                   </div>
 
+                  {/* Coluna Direita: Tasks e Atas */}
                   <div className="lg:col-span-2 space-y-6">
                     
-                    {/* Bloco de Tarefas */}
+                    {/* BLOCO DE TASKS (ACORDOS) */}
                     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
                       <div className="flex justify-between items-center mb-4">
                         <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                          <CheckSquare className="w-5 h-5 text-blue-500" />
-                          Acordos e Missões (Tasks)
+                          <CheckSquare className="w-5 h-5 text-blue-500" /> Acordos e Missões (Tasks)
                         </h3>
                         <button 
-                          onClick={() => {
-                            setNovaTask({ nome: '', descricao: '', status: 'pendente', ddl: '' });
-                            setFormTaskVisible(!formTaskVisible);
-                          }}
-                          className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 px-3 py-1.5 rounded-lg transition-colors"
+                          onClick={() => { setNovaTask({ nome: '', descricao: '', status: 'pendente', ddl: '' }); setFormTaskVisible(!formTaskVisible); }}
+                          className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 px-3 py-1.5 rounded-lg transition-colors"
                         >
                           <Plus className="w-4 h-4" /> Nova Task
                         </button>
                       </div>
 
                       {formTaskVisible && (
-                        <form onSubmit={handleSalvarTask} className="mb-6 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3 animate-[fadeIn_0.2s]">
+                        <form onSubmit={handleSalvarTask} className="mb-6 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <input type="text" placeholder="Nome da Tarefa" required value={novaTask.nome || ''} onChange={e => setNovaTask({...novaTask, nome: e.target.value})} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                            <input type="text" placeholder="Nome da Tarefa" required value={novaTask.nome} onChange={e => setNovaTask({...novaTask, nome: e.target.value})} className="w-full bg-white border border-slate-300 dark:bg-slate-900 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white" />
                             <div className="flex gap-3">
-                              <input type="date" required value={novaTask.ddl} onChange={e => setNovaTask({...novaTask, ddl: e.target.value})} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 text-slate-600 dark:text-slate-300" />
-                              <select required value={novaTask.status} onChange={e => setNovaTask({...novaTask, status: e.target.value})} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                              <input type="date" required value={novaTask.ddl} onChange={e => setNovaTask({...novaTask, ddl: e.target.value})} className="w-full bg-white border border-slate-300 dark:bg-slate-900 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 text-slate-600 dark:text-slate-300" />
+                              <select required value={novaTask.status} onChange={e => setNovaTask({...novaTask, status: e.target.value})} className="w-full bg-white border border-slate-300 dark:bg-slate-900 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white">
                                 <option value="pendente">Pendente</option>
                                 <option value="concluida">Concluída</option>
                                 <option value="expirada">Expirada</option>
                               </select>
                             </div>
                           </div>
-                          <input type="text" placeholder="Descrição detalhada..." required value={novaTask.descricao || ''} onChange={e => setNovaTask({...novaTask, descricao: e.target.value})} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                          <input type="text" placeholder="Descrição detalhada..." required value={novaTask.descricao} onChange={e => setNovaTask({...novaTask, descricao: e.target.value})} className="w-full bg-white border border-slate-300 dark:bg-slate-900 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white" />
                           <div className="flex justify-end gap-2 pt-1">
-                            <button type="button" onClick={() => setFormTaskVisible(false)} className="px-4 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700 rounded-lg transition-colors">Cancelar</button>
-                            <button type="submit" className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm">{novaTask.id ? 'Salvar Edição' : 'Salvar Task'}</button>
+                            <button type="button" onClick={() => setFormTaskVisible(false)} className="px-4 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-lg">Cancelar</button>
+                            <button type="submit" className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg">{novaTask.id ? 'Salvar Edição' : 'Salvar Task'}</button>
                           </div>
                         </form>
                       )}
                       
                       <div className="space-y-3">
-                        {tasksDoMembro.map((task) => (
+                        {tasksDoModal.map((task) => (
                           <div key={task.id} className={`flex items-start gap-3 p-3 rounded-lg border group relative ${
                             task.status === 'concluida' ? 'bg-emerald-50/50 border-emerald-100 dark:bg-emerald-500/5 dark:border-emerald-500/10' :
                             task.status === 'expirada' ? 'bg-red-50/50 border-red-100 dark:bg-red-500/5 dark:border-red-500/10' :
                             'bg-slate-50 border-slate-100 dark:bg-slate-800/50 dark:border-slate-700/50'
                           }`}>
-                            <div className="mt-0.5 flex-shrink-0">
-                              {renderIconeTask(task.status)}
-                            </div>
+                            <div className="mt-0.5 flex-shrink-0">{renderIconeTask(task.status)}</div>
                             <div className="flex-1 pr-16">
-                              {task.nome && <p className={`text-sm font-bold mb-0.5 ${task.status === 'concluida' ? 'text-slate-500 line-through dark:text-slate-400' : 'text-slate-800 dark:text-slate-100'}`}>{task.nome}</p>}
-                              <p className={`text-sm font-medium ${task.status === 'concluida' ? 'text-slate-500 line-through dark:text-slate-400' : 'text-slate-700 dark:text-slate-200'}`}>
-                                {task.descricao}
-                              </p>
-                              <p className={`text-xs mt-1 ${task.status === 'expirada' ? 'text-red-500 font-bold' : 'text-slate-500 dark:text-slate-400'}`}>
-                                DDL: {formatarDataBR(task.ddl)}
-                              </p>
+                              <p className={`text-sm font-bold mb-0.5 ${task.status === 'concluida' ? 'text-slate-500 line-through dark:text-slate-400' : 'text-slate-800 dark:text-slate-100'}`}>{task.nome}</p>
+                              <p className={`text-sm font-medium ${task.status === 'concluida' ? 'text-slate-500 line-through' : 'text-slate-700 dark:text-slate-200'}`}>{task.descricao}</p>
+                              <p className={`text-xs mt-1 ${task.status === 'expirada' ? 'text-red-500 font-bold' : 'text-slate-500'}`}>DDL: {formatarDataBR(task.ddl)}</p>
                             </div>
                             <div className="absolute top-3 right-3 flex flex-col items-end gap-2">
                               <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded-md ${
-                                task.status === 'concluida' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' :
-                                task.status === 'pendente' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400' :
-                                'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400'
-                              }`}>
-                                {task.status}
-                              </span>
+                                task.status === 'concluida' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20' :
+                                task.status === 'pendente' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20' : 'bg-red-100 text-red-700 dark:bg-red-500/20'
+                              }`}>{task.status}</span>
                               <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity mt-1">
-                                <button 
-                                  onClick={() => handleEditarTask(task)}
-                                  className="p-1 text-slate-400 hover:text-blue-500 transition-colors bg-white dark:bg-slate-800 rounded-md border border-slate-200 dark:border-slate-700 shadow-sm"
-                                  title="Editar"
-                                >
-                                  <Pencil className="w-3.5 h-3.5" />
-                                </button>
-                                <button 
-                                  onClick={() => handleExcluirTask(task.id)}
-                                  className="p-1 text-slate-400 hover:text-red-500 transition-colors bg-white dark:bg-slate-800 rounded-md border border-slate-200 dark:border-slate-700 shadow-sm"
-                                  title="Excluir"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
+                                <button onClick={() => { setNovaTask({...task}); setFormTaskVisible(true); }} className="p-1 text-slate-400 hover:text-blue-500 bg-white dark:bg-slate-800 rounded-md border shadow-sm"><Pencil className="w-3.5 h-3.5" /></button>
+                                <button onClick={() => handleExcluirTask(task.id)} className="p-1 text-slate-400 hover:text-red-500 bg-white dark:bg-slate-800 rounded-md border shadow-sm"><Trash2 className="w-3.5 h-3.5" /></button>
                               </div>
                             </div>
                           </div>
                         ))}
-                        {tasksDoMembro.length === 0 && (
-                          <p className="text-sm text-slate-500 italic">Nenhum acordo pendente.</p>
-                        )}
+                        {tasksDoModal.length === 0 && <p className="text-sm text-slate-500 italic">Nenhum acordo pendente.</p>}
                       </div>
                     </div>
 
+                    {/* BLOCO DE ATAS REIMPRESSÃO */}
                     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm">
                       <h3 className="text-base font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                        <FileText className="w-5 h-5 text-slate-400" />
-                        Histórico de Reuniões (Atas)
+                        <FileText className="w-5 h-5 text-slate-400" /> Histórico de Reuniões (Atas)
                       </h3>
                       <div className="space-y-3 max-h-[250px] overflow-y-auto pr-2 soft-scrollbar">
                         {historicoAtas.length === 0 ? (
-                          <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 text-center text-slate-500 text-sm">
-                            Nenhuma ata registrada para este colaborador ainda. <br/> Vá na aba "Meus 1:1s" para gerar a primeira!
+                          <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-300 text-center text-slate-500 text-sm">
+                            Nenhuma ata registrada para este colaborador ainda.
                           </div>
                         ) : (
                           historicoAtas.map((ata) => (
-                            <div key={ata.idAta} className="flex items-center justify-between p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm transition-hover hover:border-blue-300">
+                            <div key={ata.idAta} className="flex items-center justify-between p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 shadow-sm">
                               <div>
-                                <p className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                  Ata de Alinhamento
-                                  <span className="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">{ata.data}</span>
-                                </p>
-                                <p className="text-xs text-slate-500 mt-1 truncate max-w-xs">
-                                  Ref. Cargo: {ata.cargo} ({ata.senioridade})
-                                </p>
+                                <p className="font-bold text-slate-900 dark:text-white flex items-center gap-2">Ata Oficial <span className="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold">{ata.data}</span></p>
                               </div>
-                              <button 
-                                onClick={() => handleRebaixarAta(ata)}
-                                className="p-2 bg-slate-50 hover:bg-emerald-50 dark:bg-slate-900 dark:hover:bg-emerald-900/30 text-slate-600 hover:text-emerald-600 rounded-lg border border-slate-200 dark:border-slate-700 transition-colors flex items-center gap-2 text-sm font-semibold"
-                                title="Baixar Cópia"
-                              >
-                                <Download className="w-4 h-4" />
-                                <span className="hidden sm:inline">Baixar</span>
+                              <button onClick={() => handleRebaixarAta(ata)} className="p-2 bg-slate-50 hover:bg-emerald-50 text-slate-600 hover:text-emerald-600 rounded-lg border transition-colors flex items-center gap-2 text-sm font-semibold">
+                                <Download className="w-4 h-4" /> <span className="hidden sm:inline">Baixar</span>
                               </button>
                             </div>
                           ))
@@ -582,7 +538,7 @@ export default function MeuSquad() {
                 </div>
               )}
 
-              {/* --- ABA 2: PDI --- */}
+              {/* --- ABA 2: PDI (NOVA UI + FUNCIONALIDADE ANTIGA) --- */}
               {abaModal === 'pdi' && (
                 <div className="space-y-6 animate-[fadeIn_0.3s]">
                   <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl p-6 text-white shadow-lg">
@@ -590,38 +546,26 @@ export default function MeuSquad() {
                       <Target className="w-6 h-6 text-emerald-100" />
                       <h3 className="text-sm font-bold uppercase tracking-wider text-emerald-100">Objetivo de Carreira</h3>
                     </div>
-                    <h2 className="text-2xl font-black mb-1">{gerarPDI(lideradoSelecionado).objetivo}</h2>
-                    <p className="text-emerald-50 text-sm">{gerarPDI(lideradoSelecionado).foco}</p>
+                    <h2 className="text-2xl font-black mb-1">{gerarPDI(membroSelecionado).objetivo}</h2>
+                    <p className="text-emerald-50 text-sm">{gerarPDI(membroSelecionado).foco}</p>
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Radar de Competências (Mágica Dinâmica) */}
                     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
                       <h3 className="text-base font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
-                        <Award className="w-5 h-5 text-amber-500" />
-                        Radar de Competências
+                        <Award className="w-5 h-5 text-amber-500" /> Radar de Competências
                       </h3>
                       <div className="space-y-5">
                         {(() => {
-                          // 🔥 MÁGICA DINÂMICA: Calcula os "Boosts" em tempo real baseado no que está na tela!
-                          const tarefasFeitas = tasksDoMembro.filter(t => t.status.toLowerCase() === 'concluida').length;
-                          const pdisFeitos = pdiDoMembro.filter(p => p.status === 'Concluído').length;
-
-                          const baseComp = gerarPDI(lideradoSelecionado).competencias;
+                          const tarefasFeitas = tasksDoModal.filter(t => t.status.toLowerCase() === 'concluida').length;
+                          const pdisFeitos = pdiDoModal.filter(p => p.status === 'Concluído').length;
+                          const baseComp = gerarPDI(membroSelecionado).competencias;
                           
-                          // Aplica o bônus se o cara entregou tarefas e PDIs
                           const compsDinamicas = [
-                            { 
-                              nome: baseComp[0].nome, 
-                              nivel: Math.min(100, baseComp[0].nivel + (pdisFeitos * 8)) // +8% por PDI feito
-                            },
-                            { 
-                              nome: baseComp[1].nome, 
-                              nivel: baseComp[1].nivel // Fixo (Baseado no Sentimento das Atas)
-                            },
-                            { 
-                              nome: baseComp[2].nome, 
-                              nivel: Math.min(100, baseComp[2].nivel + (tarefasFeitas * 5)) // +5% por Task feita
-                            }
+                            { nome: baseComp[0].nome, nivel: Math.min(100, baseComp[0].nivel + (pdisFeitos * 8)) },
+                            { nome: baseComp[1].nome, nivel: baseComp[1].nivel },
+                            { nome: baseComp[2].nome, nivel: Math.min(100, baseComp[2].nivel + (tarefasFeitas * 5)) }
                           ];
 
                           return compsDinamicas.map((comp, i) => (
@@ -631,62 +575,43 @@ export default function MeuSquad() {
                                 <span className="text-slate-500">{comp.nivel}%</span>
                               </div>
                               <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5">
-                                <div 
-                                  className={`h-2.5 rounded-full transition-all duration-1000 ease-out ${comp.nivel > 70 ? 'bg-emerald-500' : comp.nivel > 40 ? 'bg-amber-500' : 'bg-red-500'}`} 
-                                  style={{ width: `${comp.nivel}%` }}
-                                ></div>
+                                <div className={`h-2.5 rounded-full transition-all duration-1000 ${comp.nivel > 70 ? 'bg-emerald-500' : comp.nivel > 40 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${comp.nivel}%` }}></div>
                               </div>
                             </div>
                           ));
                         })()}
                       </div>
-
-                      {/* CAIXA DE EXPLICAÇÃO (O SEGREDO DO PRODUTO) */}
-                      <div className="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-800/30 mt-6 text-sm text-slate-600 dark:text-slate-400 leading-relaxed shadow-sm">
-                        <strong className="text-blue-700 dark:text-blue-400 block mb-1">Como o sistema calcula as notas?</strong> 
-                        O algoritmo não usa achismos. O <strong>Hard Skill</strong> sobe com a conclusão dos PDIs técnicos, <strong>Processos</strong> aumenta quando Acordos (Tasks) são entregues no prazo, e <strong>Soft Skills</strong> é medido pela análise de sentimento das Atas.
+                      <div className="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-100 mt-6 text-sm text-slate-600 dark:text-slate-400">
+                        <strong className="text-blue-700 dark:text-blue-400 block mb-1">Cálculo Smart:</strong> O algoritmo sobe "Hard Skills" ao concluir PDIs, e "Processos" ao entregar Tasks no prazo.
                       </div>
                     </div>
 
-                    {/* PLANO DE AÇÃO */}
+                    {/* Plano de Ação (CRUD de PDI) */}
                     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
                       <div className="flex justify-between items-center mb-6">
                         <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                          <MapIcon className="w-5 h-5 text-blue-500" />
-                          Plano de Ação (Próximos Passos)
+                          <MapIcon className="w-5 h-5 text-blue-500" /> Plano de Ação (PDI)
                         </h3>
                         <button 
-                          onClick={() => {
-                            setNovoPDI({ acao: '', prazo: '', status: 'No prazo' });
-                            setFormPDIVisible(!formPDIVisible);
-                          }}
-                          className="flex items-center gap-1 text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 px-3 py-1.5 rounded-lg transition-colors"
+                          onClick={() => { setNovoPDI({ acao: '', prazo: '', status: 'No prazo' }); setFormPDIVisible(!formPDIVisible); }}
+                          className="flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition-colors"
                         >
                           <Plus className="w-4 h-4" /> Novo Passo
                         </button>
                       </div>
 
                       {formPDIVisible && (
-                        <form onSubmit={handleSalvarPDI} className="mb-6 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3 animate-[fadeIn_0.2s]">
-                          <input type="text" placeholder="Ação de Desenvolvimento (Ex: Tirar certificação AWS)" required value={novoPDI.acao || ''} onChange={e => setNovoPDI({...novoPDI, acao: e.target.value})} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500" />
+                        <form onSubmit={handleSalvarPDI} className="mb-6 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
+                          <input type="text" placeholder="Ação (Ex: Tirar certificação AWS)" required value={novoPDI.acao} onChange={e => setNovoPDI({...novoPDI, acao: e.target.value})} className="w-full bg-white border border-slate-300 dark:bg-slate-900 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white" />
                           <div className="flex gap-3">
-                            <select 
-                              required 
-                              value={novoPDI.prazo || ''} 
-                              onChange={e => setNovoPDI({...novoPDI, prazo: e.target.value})} 
-                              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-slate-600 dark:text-slate-300">
-                              <option value="" disabled>Selecione o prazo...</option>
+                            <select required value={novoPDI.prazo} onChange={e => setNovoPDI({...novoPDI, prazo: e.target.value})} className="w-full bg-white border border-slate-300 dark:bg-slate-900 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white">
+                              <option value="" disabled>Prazo...</option>
                               <option value="1 mês">1 mês</option>
                               <option value="2 meses">2 meses</option>
                               <option value="3 meses">3 meses</option>
                               <option value="6 meses">6 meses</option>
                             </select>                            
-                            <select 
-                              required 
-                              value={novoPDI.status} 
-                              onChange={e => setNovoPDI({...novoPDI, status: e.target.value})} 
-                              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500"
-                            >
+                            <select required value={novoPDI.status} onChange={e => setNovoPDI({...novoPDI, status: e.target.value})} className="w-full bg-white border border-slate-300 dark:bg-slate-900 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white">
                               <option value="No prazo">No prazo</option>
                               <option value="Em andamento">Em andamento</option>
                               <option value="Concluído">Concluído</option>
@@ -694,63 +619,62 @@ export default function MeuSquad() {
                             </select>
                           </div>
                           <div className="flex justify-end gap-2 pt-1">
-                            <button type="button" onClick={() => setFormPDIVisible(false)} className="px-4 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700 rounded-lg transition-colors">Cancelar</button>
-                            <button type="submit" className="px-4 py-1.5 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors shadow-sm">{novoPDI.id ? 'Salvar Edição' : 'Salvar Passo'}</button>
+                            <button type="button" onClick={() => setFormPDIVisible(false)} className="px-4 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-lg">Cancelar</button>
+                            <button type="submit" className="px-4 py-1.5 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg">{novoPDI.id ? 'Salvar Edição' : 'Salvar Passo'}</button>
                           </div>
                         </form>
                       )}
 
                       <div className="space-y-4">
-                        {pdiDoMembro.map((acao, index) => (
+                        {pdiDoModal.map((acao, index) => (
                           <div key={acao.id} className="flex gap-4 items-start group relative">
-                            <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center flex-shrink-0 text-slate-500 font-bold text-xs border border-slate-200 dark:border-slate-700">
+                            <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center flex-shrink-0 text-slate-500 font-bold text-xs border">
                               {index + 1}
                             </div>
                             <div className="flex-1 pr-16">
-                              <h4 className={`text-sm font-bold ${acao.status === 'Concluído' ? 'text-slate-500 line-through dark:text-slate-400' : 'text-slate-900 dark:text-white'}`}>{acao.acao}</h4>
+                              <h4 className={`text-sm font-bold ${acao.status === 'Concluído' ? 'text-slate-500 line-through' : 'text-slate-900 dark:text-white'}`}>{acao.acao}</h4>
                               <div className="flex items-center gap-3 mt-1">
-                                <span className="text-xs text-slate-500 flex items-center gap-1">
-                                <Clock className="w-3 h-3" /> {acao.prazoDisplay || acao.prazo}
-                                </span>
+                                <span className="text-xs text-slate-500 flex items-center gap-1"><Clock className="w-3 h-3" /> {acao.prazoDisplay || acao.prazo}</span>
                                 <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
-                                acao.status === 'Em andamento' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                                acao.status === 'No prazo' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
-                                acao.status === 'Concluído' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                                acao.status === 'Expirado' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                                'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-                                }`}>{acao.status}
-                                </span>
+                                  acao.status === 'Em andamento' ? 'bg-blue-100 text-blue-700' :
+                                  acao.status === 'No prazo' ? 'bg-amber-100 text-amber-700' :
+                                  acao.status === 'Concluído' ? 'bg-emerald-100 text-emerald-700' :
+                                  acao.status === 'Expirado' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'
+                                }`}>{acao.status}</span>
                               </div>
                             </div>
                             <div className="absolute top-0 right-0 flex flex-col items-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                               <div className="flex gap-1 mt-1">
-                                <button 
-                                  onClick={() => handleEditarPDI(acao)}
-                                  className="p-1.5 text-slate-400 hover:text-emerald-500 transition-colors bg-white dark:bg-slate-800 rounded-md border border-slate-200 dark:border-slate-700 shadow-sm"
-                                  title="Editar"
-                                >
-                                  <Pencil className="w-3.5 h-3.5" />
-                                </button>
-                                <button 
-                                  onClick={() => handleExcluirPDI(acao.id)}
-                                  className="p-1.5 text-slate-400 hover:text-red-500 transition-colors bg-white dark:bg-slate-800 rounded-md border border-slate-200 dark:border-slate-700 shadow-sm"
-                                  title="Excluir"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
+                                <button onClick={() => { setNovoPDI({...acao}); setFormPDIVisible(true); }} className="p-1.5 text-slate-400 hover:text-emerald-500 bg-white dark:bg-slate-800 rounded-md border shadow-sm"><Pencil className="w-3.5 h-3.5" /></button>
+                                <button onClick={() => handleExcluirPDI(acao.id)} className="p-1.5 text-slate-400 hover:text-red-500 bg-white dark:bg-slate-800 rounded-md border shadow-sm"><Trash2 className="w-3.5 h-3.5" /></button>
                               </div>
                             </div>
                           </div>
                         ))}
-                        {pdiDoMembro.length === 0 && (
-                          <p className="text-sm text-slate-500 italic">Nenhum passo no PDI.</p>
-                        )}
+                        {pdiDoModal.length === 0 && <p className="text-sm text-slate-500 italic">Nenhum passo no PDI.</p>}
                       </div>
                     </div>
                   </div>
                 </div>
               )}
             </div>
+
+            {/* Footer do Modal (Navegação Rápida) */}
+            <div className="p-6 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex flex-col sm:flex-row gap-3 flex-shrink-0">
+              <button 
+                onClick={() => { fecharPerfil(); if(setAbaAtiva) setAbaAtiva('pdi'); }}
+                className="flex-1 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold rounded-xl shadow-sm flex items-center justify-center gap-2 hover:bg-slate-50"
+              >
+                <Target className="w-4 h-4" /> Criar Metas SMART
+              </button>
+              <button 
+                onClick={() => { localStorage.setItem('@clearit-liderado-foco', membroSelecionado.id); fecharPerfil(); if(setAbaAtiva) setAbaAtiva('1a1'); }}
+                className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-2"
+              >
+                <TrendingUp className="w-4 h-4" /> Gerar Pauta 1:1
+              </button>
+            </div>
+            
           </div>
         </div>
       )}
@@ -780,15 +704,12 @@ export default function MeuSquad() {
         )}
       </div>
 
-      {/* BALÃOZINHO DE AVISO (TOAST FLUTUANTE) */}
+      {/* BALÃOZINHO DE AVISO */}
       {balaoAviso.visivel && (
         <div className="fixed bottom-6 right-6 z-[200] max-w-md bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-5 py-4 rounded-2xl shadow-2xl border border-slate-700 dark:border-slate-200 flex items-center gap-3 animate-[slideIn_0.3s_ease-out]">
           <AlertCircle className="w-6 h-6 text-amber-400 dark:text-amber-500 flex-shrink-0" />
           <p className="text-sm font-semibold pr-2">{balaoAviso.mensagem}</p>
-          <button 
-            onClick={() => setBalaoAviso({ visivel: false, mensagem: '' })}
-            className="p-1 hover:bg-slate-800 dark:hover:bg-slate-100 rounded-lg transition-colors ml-auto text-slate-400 hover:text-white dark:text-slate-500 dark:hover:text-slate-900"
-          >
+          <button onClick={() => setBalaoAviso({ visivel: false, mensagem: '' })} className="p-1 hover:bg-slate-800 dark:hover:bg-slate-100 rounded-lg transition-colors ml-auto text-slate-400 hover:text-white">
             <X className="w-4 h-4" />
           </button>
         </div>

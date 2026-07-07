@@ -2,13 +2,12 @@
 import React, { useState } from 'react';
 import { 
   Bot, Send, FileText, Download, Loader2, 
-  User, CheckCircle2, AlertCircle, Briefcase, Clock, Eye, EyeOff
+  User, CheckCircle2, AlertCircle, Briefcase, Eye, EyeOff, TrendingUp, Lock, ShieldCheck
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import html2pdf from 'html2pdf.js';
 import { DB_SQUADS } from '../dados';
 
-// 🔥 Importando nossas funções de LGPD! (Ajuste o caminho se necessário)
 import { salvarLGPD, lerLGPD } from '../utils/security';
 
 export default function Meus1a1({ lideradoPreSelecionado, setAbaAtiva }) { 
@@ -18,17 +17,29 @@ export default function Meus1a1({ lideradoPreSelecionado, setAbaAtiva }) {
   const meuSquad = DB_SQUADS[idLiderLogado] || [];
 
   const [lideradoSelecionado, setLideradoSelecionado] = useState(null);
+  
+  // Variáveis ocultas da UI, mas enviadas para a IA (Contexto Preservado)
   const [senioridade, setSenioridade] = useState('');
   const [tempoCasa, setTempoCasa] = useState('');
   const [perfilLider, setPerfilLider] = useState(localStorage.getItem('@clearit-perfil-config') || 'Técnico');
-  const [perfilLiderado, setPerfilLiderado] = useState('');
+  
+  const [perfilLiderado, setPerfilLiderado] = useState(''); 
   const [entregas, setEntregas] = useState('');
   
   const [loading, setLoading] = useState(false);
   const [resultado, setResultado] = useState('');
   const [erro, setErro] = useState('');
-  const [toast, setToast] = useState({ visivel: false, mensagem: '' });
+  const [toast, setToast] = useState({ visivel: false, mensagem: '', icone: null });
   const [abaDocumento, setAbaDocumento] = useState('roteiro');
+
+  const buscarMomentoDoLiderado = (liderado) => {
+    if (!liderado) return '';
+    const idLoginFalback = liderado.nome.toLowerCase().replace(' ', '_');
+    
+    return localStorage.getItem(`@clearit-momento-${liderado.id}`) || 
+           localStorage.getItem(`@clearit-momento-${idLoginFalback}`) || 
+           'Aguardando preenchimento...';
+  };
 
   React.useEffect(() => {
     const atualizarPerfil = () => {
@@ -51,14 +62,15 @@ export default function Meus1a1({ lideradoPreSelecionado, setAbaAtiva }) {
         setLideradoSelecionado(liderado);
         setSenioridade(liderado.senioridade);
         setTempoCasa(liderado.tempoCasa);
+        setPerfilLiderado(buscarMomentoDoLiderado(liderado)); 
       }
       if (idFoco) localStorage.removeItem('@clearit-liderado-foco');
     }
   }, [lideradoPreSelecionado, meuSquad]);
 
-  const mostrarToast = (mensagem) => {
-    setToast({ visivel: true, mensagem });
-    setTimeout(() => { setToast({ visivel: false, mensagem: '' }); }, 4000);
+  const mostrarToast = (mensagem, icone = 'check') => {
+    setToast({ visivel: true, mensagem, icone });
+    setTimeout(() => { setToast({ visivel: false, mensagem: '', icone: null }); }, 5000);
   };
 
   const handleLideradoChange = (e) => {
@@ -67,12 +79,33 @@ export default function Meus1a1({ lideradoPreSelecionado, setAbaAtiva }) {
       setLideradoSelecionado(null);
       setSenioridade('');
       setTempoCasa('');
+      setPerfilLiderado('');
       return;
     }
     const liderado = meuSquad.find(m => m.id.toString() === id);
     setLideradoSelecionado(liderado);
     setSenioridade(liderado.senioridade);
     setTempoCasa(liderado.tempoCasa);
+    setPerfilLiderado(buscarMomentoDoLiderado(liderado)); 
+  };
+
+  // 🔥 O ESCUDO DE PRIVACIDADE (SEMANTIC FIREWALL LGPD) 🔥
+  const aplicarFiltroLGPD = (texto) => {
+    let textoFiltrado = texto;
+    
+    // Captura CPF (Ex: 123.456.789-00 ou 12345678900)
+    textoFiltrado = textoFiltrado.replace(/\b\d{3}\.\d{3}\.\d{3}-\d{2}\b|\b\d{11}\b/g, '[CPF_PROTEGIDO]');
+    
+    // Captura Valores Financeiros (Ex: R$ 5000, R$ 5.000,00)
+    textoFiltrado = textoFiltrado.replace(/R\$\s?\d{1,3}(?:\.\d{3})*(?:,\d{2})?\b/gi, '[SALÁRIO_PROTEGIDO]');
+    
+    // Captura E-mails
+    textoFiltrado = textoFiltrado.replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, '[EMAIL_PROTEGIDO]');
+    
+    // Captura Telefones (Ex: 11 99999-9999)
+    textoFiltrado = textoFiltrado.replace(/\b\(?\d{2}\)?\s?\d{4,5}-?\d{4}\b/g, '[TELEFONE_PROTEGIDO]');
+
+    return textoFiltrado;
   };
 
   const handleGerar = async (e) => {
@@ -87,10 +120,17 @@ export default function Meus1a1({ lideradoPreSelecionado, setAbaAtiva }) {
       return;
     }
 
+    // 1. Aplica o Firewall LGPD nas observações do líder
+    const textoLimpo = aplicarFiltroLGPD(entregas);
+    
+    // Dispara aviso visual se o Firewall precisou atuar
+    if (textoLimpo !== entregas) {
+      mostrarToast('🛡️ Firewall LGPD Ativado: Dados sensíveis (CPF/Salário) foram anonimizados antes do envio para a IA.', 'shield');
+    }
+
     try {
       const idStr = lideradoSelecionado.id.toString();
       
-      // 🔥 Usando as funções de leitura ofuscadas
       const pdisSalvos = lerLGPD('@clearit-pdi') || [];
       const pdisDeletados = lerLGPD('@clearit-deleted-pdi') || [];
       const pdisDoMembro = pdisSalvos.filter(p => p.idLiderado === idStr && !pdisDeletados.includes(p.id));
@@ -107,6 +147,8 @@ export default function Meus1a1({ lideradoPreSelecionado, setAbaAtiva }) {
       const resumoPdis = formatarLista(pdisDoMembro, 'PDI');
       const resumoTasks = formatarLista(tasksDoMembro, 'Acordo');
 
+      const momentoParaIA = perfilLiderado === 'Aguardando preenchimento...' ? 'Focado nas entregas' : perfilLiderado;
+
       const historicoOculto = `
 [INFORMAÇÃO DE SISTEMA PARA A IA - CONTEXTO OBRIGATÓRIO DA MENTORIA]:
 Abaixo está o histórico real do liderado extraído do banco de dados. Use essas informações para personalizar a pauta:
@@ -118,9 +160,10 @@ ${resumoPdis}
 ${resumoTasks}
 
 [OBSERVAÇÕES DO LÍDER PARA ESSA REUNIÃO]:
-${entregas}
+${textoLimpo} 
       `;
 
+      // Envia também os dados ocultos da UI (tempoCasa e perfilLider)
       const response = await fetch('http://localhost:8000/api/gerar-roteiro', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -128,7 +171,7 @@ ${entregas}
           perfil_lideranca: perfilLider,
           senioridade_liderado: senioridade,
           tempo_casa: tempoCasa,
-          perfil_comportamental: perfilLiderado,
+          perfil_comportamental: momentoParaIA, 
           resumo_entregas: historicoOculto
         })
       });
@@ -146,10 +189,7 @@ ${entregas}
   };
 
   const handleDownloadPDF = async () => {
-    if (!lideradoSelecionado) {
-      mostrarToast("Erro de segurança: Liderado não identificado.");
-      return;
-    }
+    if (!lideradoSelecionado) return mostrarToast("Erro de segurança: Liderado não identificado.");
 
     const elemento = document.getElementById('conteudo-ata');
     const opt = {
@@ -161,17 +201,13 @@ ${entregas}
     };
 
     html2pdf().set(opt).from(elemento).save();
-
-    // XP (Mantemos JSON normal porque não tem dados sensíveis)
-    const rankingSalvo = JSON.parse(localStorage.getItem('@clearit-ranking')) || {};
-    rankingSalvo[idLiderLogado] = (rankingSalvo[idLiderLogado] || 0) + 100;
-    localStorage.setItem('@clearit-ranking', JSON.stringify(rankingSalvo));
     
-    // Notificações
+    // DISPARA A NOTIFICAÇÃO DE FEEDBACK PENDENTE
     const novaNotificacao = {
       id: Date.now(),
-      titulo: 'Você ganhou +100 XP! ⚡',
-      mensagem: `Ata oficial gerada para ${lideradoSelecionado.nome}.`,
+      target: 'LIDER',
+      titulo: 'Aguardando Feedback ⏳',
+      mensagem: `Ata de ${lideradoSelecionado.nome} gerada! O XP será liberado após a avaliação dele.`,
       tempo: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
       lida: false
     };
@@ -180,31 +216,46 @@ ${entregas}
     salvarLGPD('@clearit-notificacoes', notsSalvas);
     window.dispatchEvent(new Event('notificacao-atualizada'));
 
-    // Ofuscação da Ata!
+    // SALVA A ATA NO HISTÓRICO COM A FLAG DE FEEDBACK PENDENTE
     const partesTexto = resultado.split(/--- ATA OFICIAL ---|- ATA OFICIAL -|ATA OFICIAL/);
     const ataParaRH = partesTexto.length > 1 ? partesTexto[1].trim() : resultado;
 
     const atasSalvas = lerLGPD('@clearit-atas-squad') || [];
-    const novaAta = {
+    atasSalvas.unshift({
       idAta: Date.now(),
       idLiderado: lideradoSelecionado.id.toString(),
       nomeLiderado: lideradoSelecionado.nome,
       cargo: lideradoSelecionado.cargo,
       senioridade: senioridade,
       tempoCasa: tempoCasa,
-      data: new Date().toLocaleDateString('pt-BR'),
-      conteudoRH: ataParaRH
-    };
-    atasSalvas.unshift(novaAta); 
-    
-    // 🔥 Salvando a ata de forma invisível
+      data: new Date().toLocaleDateString('pt-BR'), 
+      conteudoRH: ataParaRH,
+      idLider: idLiderLogado,
+      feedbackPendente: true
+    }); 
     salvarLGPD('@clearit-atas-squad', atasSalvas);
 
-    mostrarToast('✅ Ata baixada com sucesso e 100 XP creditados!');
+    // RESETAR O ALARME DE CADÊNCIA (+15 DIAS)
+    let squads = lerLGPD('@clearit-squad') || [];
+    if (squads.length === 0) squads = DB_SQUADS[idLiderLogado] || [];
+    
+    const indexMembro = squads.findIndex(m => m.id.toString() === lideradoSelecionado.id.toString());
+    
+    if (indexMembro !== -1) {
+      const novaData = new Date();
+      novaData.setDate(novaData.getDate() + 15);
+      
+      const ano = novaData.getFullYear();
+      const mes = String(novaData.getMonth() + 1).padStart(2, '0');
+      const dia = String(novaData.getDate()).padStart(2, '0');
+      
+      squads[indexMembro].proxima_reuniao = `${ano}-${mes}-${dia}`;
+      salvarLGPD('@clearit-squad', squads);
+    }
 
-    setTimeout(() => {
-      if (setAbaAtiva) setAbaAtiva('home'); // Volta pra Home pra ver os gráficos atualizados!
-    }, 2000);
+    mostrarToast('✅ Ata baixada! Aguardando o Liderado avaliar a reunião.');
+
+    setTimeout(() => { if (setAbaAtiva) setAbaAtiva('Home'); }, 2000);
 
     try {
       await fetch('http://localhost:8000/api/registrar-download', {
@@ -229,7 +280,7 @@ ${entregas}
           Gerador de Roteiro Inteligente
         </h1>
         <p className="text-slate-600 dark:text-slate-400 mt-1">
-          Prepare pautas altamente personalizadas utilizando inteligência artificial.
+          Prepare pautas altamente personalizadas utilizando inteligência artificial com proteção LGPD.
         </p>
       </div>
 
@@ -269,9 +320,14 @@ ${entregas}
           </div>
 
           <form onSubmit={handleGerar} className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 space-y-4">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-4 flex items-center gap-2">
-              <Bot className="w-4 h-4" /> Parâmetros da Reunião
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                <Bot className="w-4 h-4" /> Parâmetros da Reunião
+              </h2>
+              <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-100 dark:border-emerald-800">
+                <ShieldCheck className="w-3 h-3" /> LGPD Ativo
+              </span>
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -281,69 +337,39 @@ ${entregas}
                   {senioridade || 'Aguardando...'}
                 </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Tempo de Casa</label>
-                <div className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-600 dark:text-slate-400 flex items-center gap-2 cursor-not-allowed">
-                  <Clock className="w-4 h-4 text-slate-400" />
-                  {tempoCasa || 'Aguardando...'}
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Seu Perfil (Líder)</label>
-                <div 
-                  className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-600 dark:text-slate-400 font-semibold flex items-center gap-2 cursor-not-allowed"
-                  title="Configurado na aba Meu Perfil"
-                >
-                  <User className="w-4 h-4 text-slate-400" />
-                  {perfilLider}
-                </div>
-              </div>
               
               <div>
-                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Momento do Liderado</label>
-                <select 
-                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm outline-none text-slate-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all" 
-                  value={perfilLiderado} 
-                  onChange={e => setPerfilLiderado(e.target.value)} 
-                  disabled={loading}
-                  required
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1 flex justify-between items-center">
+                  <span>Status do Liderado</span>
+                  <span className="text-[10px] text-blue-500 font-semibold bg-blue-50 px-1.5 py-0.5 rounded flex items-center gap-1">
+                    <Lock className="w-3 h-3" /> Sinc.
+                  </span>
+                </label>
+                <div 
+                  className={`w-full border rounded-xl px-4 py-2.5 text-sm font-semibold flex items-center gap-2 cursor-not-allowed transition-all ${
+                    perfilLiderado === 'Aguardando preenchimento...' || !lideradoSelecionado
+                    ? 'bg-slate-50 border-slate-200 text-slate-400' 
+                    : 'bg-blue-50 border-blue-200 text-blue-700'
+                  }`}
+                  title="Apenas o liderado pode alterar o próprio momento na tela dele."
                 >
-                  <option value="">Selecione...</option>
-                  <option value="Motivado e entregando acima do esperado">Alta Performance</option>
-                  <option value="Consistente, mas precisa de novos desafios">Zona de Conforto</option>
-                  <option value="Abaixo do esperado ou desmotivado">Abaixo do Esperado</option>
-                </select>
+                  <TrendingUp className="w-4 h-4 opacity-70" />
+                  <span className="truncate">{lideradoSelecionado ? perfilLiderado : 'Selecione acima'}</span>
+                </div>
               </div>
             </div>
 
-            {perfilLider === 'Técnico' && (
-              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl flex items-start gap-3 text-sm text-blue-700 dark:text-blue-300 animate-[fadeIn_0.3s]">
-                <span className="text-lg leading-none">🧠</span>
-                <p className="leading-tight"><strong>Nugget Rápido:</strong> Liderança técnica não é sobre ter todas as respostas, mas fazer as perguntas certas. Foque em ouvir mais e direcionar.</p>
-              </div>
-            )}
-            {perfilLider === 'Transição' && (
-              <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl flex items-start gap-3 text-sm text-amber-700 dark:text-amber-300 animate-[fadeIn_0.3s]">
-                <span className="text-lg leading-none">🌱</span>
-                <p className="leading-tight"><strong>Nugget Rápido:</strong> Conversas difíceis constroem times fortes. Use a escuta ativa e não tenha medo de demonstrar empatia antes de cobrar.</p>
-              </div>
-            )}
-            {perfilLider === 'Engajado' && (
-              <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl flex items-start gap-3 text-sm text-emerald-700 dark:text-emerald-300 animate-[fadeIn_0.3s]">
-                <span className="text-lg leading-none">🚀</span>
-                <p className="leading-tight"><strong>Nugget Rápido:</strong> Seu time confia em você! O desafio de hoje é sair do micro-gerenciamento e focar em desbloquear o caminho para eles.</p>
-              </div>
-            )}
-
             <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1 mt-1">Foco / Entregas Recentes</label>
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1 mt-1 flex justify-between">
+                Foco / Entregas Recentes
+                <span className="text-[10px] font-medium text-slate-400 flex items-center gap-1">
+                  Valores financeiros e CPFs serão anonimizados
+                </span>
+              </label>
               <textarea 
-                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm outline-none text-slate-900 dark:text-white resize-none disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                rows="3"
-                placeholder="Ex: Entregou o projeto X com atraso."
+                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm outline-none text-slate-900 dark:text-white resize-none disabled:opacity-50 disabled:cursor-not-allowed transition-all focus:ring-2 focus:ring-blue-500"
+                rows="4"
+                placeholder="Ex: Entregou o projeto X com atraso. Solicitar aumento de R$ 2.000 (O Firewall vai censurar automaticamente)."
                 value={entregas}
                 onChange={e => setEntregas(e.target.value)}
                 disabled={loading}
@@ -364,8 +390,7 @@ ${entregas}
         </div>
 
         {/* LADO DIREITO: RESULTADO */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col min-h-[600px] overflow-hidden">
-          
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col min-h-[500px] overflow-hidden">
           <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50">
             <button 
               disabled={!resultado}
@@ -402,7 +427,7 @@ ${entregas}
               <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none animate-[fadeIn_0.3s]">
                 <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-800 dark:text-blue-300 p-4 rounded-xl mb-6 flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm m-0"><strong>Atenção Líder:</strong> Este roteiro contém dicas de mentoria baseadas no seu perfil e no momento do seu liderado. Ele <strong>não</strong> aparecerá no PDF final do RH.</p>
+                  <p className="text-sm m-0"><strong>Atenção Líder:</strong> Este roteiro contém dicas de mentoria baseadas no seu perfil oculto e no momento do seu liderado. Ele <strong>não</strong> aparecerá no PDF final.</p>
                 </div>
                 <ReactMarkdown>{roteiroConfidencial}</ReactMarkdown>
               </div>
@@ -412,14 +437,8 @@ ${entregas}
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-slate-900 dark:text-white font-bold">Documento Pronto para Assinatura</h3>
                 <button onClick={handleDownloadPDF} className="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold shadow-sm transition-all">
-                  <Download className="w-4 h-4" /> Gerar PDF
+                  <Download className="w-4 h-4" /> Gerar PDF e Aguardar Avaliação
                 </button>
-                <a 
-                  href={`mailto:?subject=Ata da nossa Reunião 1:1&body=Olá! Nossa reunião de 1:1 foi muito produtiva. Estou com os combinados registrados aqui. Por favor, confira as ações do seu PDI no sistema. Um abraço!`}
-                  className="px-6 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl font-bold transition-all shadow-sm flex items-center gap-2"
-                >
-                  📧 Enviar ao Liderado
-                </a>
               </div>
 
               <div id="conteudo-ata" className="bg-white text-slate-900 p-6 md:p-8 rounded-xl border border-slate-200 shadow-sm">
@@ -467,9 +486,11 @@ ${entregas}
       </div>
 
       {toast.visivel && (
-        <div className="fixed bottom-8 right-8 z-50 flex items-center gap-3 bg-emerald-500 text-white px-6 py-4 rounded-xl shadow-2xl shadow-emerald-500/30 animate-[fadeIn_0.3s_ease-out]">
-          <CheckCircle2 className="w-6 h-6 flex-shrink-0" />
-          <span className="font-semibold">{toast.mensagem}</span>
+        <div className={`fixed bottom-8 right-8 z-50 flex items-center gap-3 text-white px-6 py-4 rounded-xl shadow-2xl animate-[fadeIn_0.3s_ease-out] ${
+          toast.icone === 'shield' ? 'bg-amber-500 shadow-amber-500/30' : 'bg-emerald-500 shadow-emerald-500/30'
+        }`}>
+          {toast.icone === 'shield' ? <ShieldCheck className="w-6 h-6 flex-shrink-0" /> : <CheckCircle2 className="w-6 h-6 flex-shrink-0" />}
+          <span className="font-semibold text-sm max-w-md leading-tight">{toast.mensagem}</span>
         </div>
       )}
     </div>
