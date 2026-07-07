@@ -1,5 +1,5 @@
 // src/views/Playbook.jsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { 
   BookOpen, PlayCircle, FileText, Search, Star, Clock, 
   ChevronRight, ShieldAlert, Target, HeartPulse, X, Play

@@ -1,25 +1,30 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { 
-  Menu, X, Sun, Moon, User, Calendar, Users, MessageSquare, 
-  Settings, LogOut, Trophy, Info, Bell, Zap, BarChart3, House, Camera, BookOpen
+  Menu, X, Sun, Moon, Calendar, Users, MessageSquare, 
+  Settings, LogOut, Trophy, Info, Bell, BarChart3, House, Camera, BookOpen
 } from 'lucide-react';
 
 import { salvarLGPD, lerLGPD } from './utils/security';
-import Login from './views/Login';
 import logoImagem from './assets/logo.png';
 import logoBranca from './assets/logo-branco.png';
 
-// Import das views
-import Home from './views/Home';
-import HomeLiderado from './views/HomeLiderado'; // <--- Nova Home do Liderado
-import HomeRH from './views/HomeRH'; // <--- Nova Home do RH
-import Meus1a1 from './views/Meus1a1';
-import Ranking from './views/Ranking';
-import MeuSquad from './views/MeuSquad';
-import PainelRH from './views/PainelRH';
-import Playbook from './views/Playbook';
-import About from './views/About';
-import ProximasReunioes from './views/ProximasReunioes';
+const Login = lazy(() => import('./views/Login'));
+const Home = lazy(() => import('./views/Home'));
+const HomeLiderado = lazy(() => import('./views/HomeLiderado'));
+const HomeRH = lazy(() => import('./views/HomeRH'));
+const Meus1a1 = lazy(() => import('./views/Meus1a1'));
+const Ranking = lazy(() => import('./views/Ranking'));
+const MeuSquad = lazy(() => import('./views/MeuSquad'));
+const PainelRH = lazy(() => import('./views/PainelRH'));
+const Playbook = lazy(() => import('./views/Playbook'));
+const About = lazy(() => import('./views/About'));
+const ProximasReunioes = lazy(() => import('./views/ProximasReunioes'));
+
+const ViewFallback = () => (
+  <div className="flex min-h-[240px] items-center justify-center rounded-2xl border border-slate-200 bg-white/70 text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-400">
+    Carregando visão...
+  </div>
+);
 
 export default function App() {
   // 1. DECLARAÇÃO DE HOOKS
@@ -27,7 +32,6 @@ export default function App() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('Home');
-  const [lideradoParaPlanejar, setLideradoParaPlanejar] = useState(null);
   
   // Estados de Menus e Notificações (Aqui estavam os que faltavam!)
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -56,7 +60,11 @@ export default function App() {
     };
     carregarNotificacoes();
     window.addEventListener('notificacao-atualizada', carregarNotificacoes);
-    return () => window.removeEventListener('notificacao-atualizada', carregarNotificacoes);
+    window.addEventListener('clearit-data-updated', carregarNotificacoes);
+    return () => {
+      window.removeEventListener('notificacao-atualizada', carregarNotificacoes);
+      window.removeEventListener('clearit-data-updated', carregarNotificacoes);
+    };
   }, []);
 
   // Fecha menus ao clicar fora
@@ -89,7 +97,11 @@ export default function App() {
 
   // 4. RENDERIZAÇÃO CONDICIONAL
   if (!user) {
-    return <Login onLogin={(usuario) => setUser(usuario)} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />;
+    return (
+      <Suspense fallback={<ViewFallback />}>
+        <Login onLogin={(usuario) => setUser(usuario)} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />
+      </Suspense>
+    );
   }
 
   const menuVisivel = allMenuItems.filter(item => item.roles.includes(user.role));
@@ -217,19 +229,21 @@ export default function App() {
         </aside>
 
         <main className="flex-1 p-6 overflow-y-auto">
-          {/* Roteamento Inteligente da Home */}
-          {activeTab === 'Home' && (
-            user.role === 'LIDERADO' ? <HomeLiderado /> : 
-            user.role === 'RH' ? <HomeRH /> : 
-            <Home setAbaAtiva={setActiveTab} />
-          )}          
-          {activeTab === '1a1' && user.role === 'LIDER' && <Meus1a1 lideradoPreSelecionado={lideradoParaPlanejar} />}
-          {activeTab === 'squad' && user.role === 'LIDER' && <MeuSquad />}
-          {activeTab === 'reunioes' && user.role === 'LIDER' && <ProximasReunioes />}
-          {activeTab === 'ranking' && user.role === 'LIDER' && <Ranking />}
-          {activeTab === 'painel' && user.role === 'RH' && <PainelRH />}
-          {activeTab === 'playbook' && <Playbook />}
-          {activeTab === 'about' && <About />}
+          <Suspense fallback={<ViewFallback />}>
+            {/* Roteamento Inteligente da Home */}
+            {activeTab === 'Home' && (
+              user.role === 'LIDERADO' ? <HomeLiderado /> : 
+              user.role === 'RH' ? <HomeRH /> : 
+              <Home setAbaAtiva={setActiveTab} />
+            )}
+            {activeTab === '1a1' && user.role === 'LIDER' && <Meus1a1 setAbaAtiva={setActiveTab} />}
+            {activeTab === 'squad' && user.role === 'LIDER' && <MeuSquad />}
+            {activeTab === 'reunioes' && user.role === 'LIDER' && <ProximasReunioes />}
+            {activeTab === 'ranking' && user.role === 'LIDER' && <Ranking />}
+            {activeTab === 'painel' && user.role === 'RH' && <PainelRH />}
+            {activeTab === 'playbook' && <Playbook />}
+            {activeTab === 'about' && <About />}
+          </Suspense>
         </main>
       </div>
 

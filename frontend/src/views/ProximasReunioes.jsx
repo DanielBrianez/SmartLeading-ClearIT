@@ -1,5 +1,5 @@
 // src/views/ProximasReunioes.jsx
-import React, { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { 
   Calendar, Clock, AlertCircle, CheckCircle2, ChevronRight, 
   CalendarClock, X, AlertTriangle 
@@ -10,9 +10,9 @@ import { lerLGPD, salvarLGPD } from '../utils/security';
 export default function ProximasReunioes({ onPlanejar }) {
   const idLiderLogado = "daniel_nascimento";
   
-  const [adiadas, setAdiadas] = useState(lerLGPD('@clearit-reunioes-adiadas') || {});
+  const [adiadas, setAdiadas] = useState(() => lerLGPD('@clearit-reunioes-adiadas') || {});
   const [filtroAtivo, setFiltroAtivo] = useState('todas'); // todas, prontas, expiradas, adiadas
-  const [reunioes, setReunioes] = useState([]);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // 🔥 ESTADOS DE FEEDBACK VISUAL PREMIUM 🔥
   const [balaoAviso, setBalaoAviso] = useState({ visivel: false, mensagem: '', tipo: 'sucesso' });
@@ -24,6 +24,12 @@ export default function ProximasReunioes({ onPlanejar }) {
   };
 
   useEffect(() => {
+    const atualizarDados = () => setRefreshKey(prev => prev + 1);
+    window.addEventListener('clearit-data-updated', atualizarDados);
+    return () => window.removeEventListener('clearit-data-updated', atualizarDados);
+  }, []);
+
+  const reunioes = useMemo(() => {
     let squadAtual = lerLGPD('@clearit-squad') || [];
     if (squadAtual.length === 0) {
       squadAtual = DB_SQUADS[idLiderLogado] || [];
@@ -61,8 +67,8 @@ export default function ProximasReunioes({ onPlanejar }) {
     });
 
     listaProcessada.sort((a, b) => a.dataCalculada - b.dataCalculada);
-    setReunioes(listaProcessada);
-  }, [adiadas]); 
+    return listaProcessada;
+  }, [adiadas, refreshKey]); 
 
   const handleAdiar = (membro) => {
     const novaData = new Date(membro.dataCalculada);

@@ -1,7 +1,7 @@
 // src/views/Home.jsx
 import React, { useState, useEffect } from 'react';
 import { 
-  Users, Clock, AlertTriangle, FileText, CheckCircle2, TrendingUp, Medal, ArrowRight 
+  Users, Clock, AlertTriangle, FileText, CheckCircle2, Medal, ArrowRight 
 } from 'lucide-react';
 import { lerLGPD, salvarLGPD } from '../utils/security';
 import { DB_SQUADS } from '../dados';
@@ -14,54 +14,57 @@ export default function Home({ setAbaAtiva }) {
   const [metricas, setMetricas] = useState({ atrasadas: 0, noPrazo: 0, atasMes: 0, xp: 0 });
 
   useEffect(() => {
-    // 1. GARANTE QUE ESTÁ LENDO O BANCO VIVO (localStorage)
-    let squadAtual = lerLGPD('@clearit-squad') || [];
-    
-    if (squadAtual.length === 0) {
-      squadAtual = DB_SQUADS[idLider] || [];
-      salvarLGPD('@clearit-squad', squadAtual);
-    }
-    
-    // 2. LÓGICA AGENT-FIRST: CALCULA QUEM ESTÁ ATRASADO HOJE
-    const hoje = new Date();
-    hoje.setHours(0,0,0,0);
-    
-    let atrasadas = 0;
-    let noPrazo = 0;
-
-    const squadProcessado = squadAtual.map(m => {
-      let dataReuniao;
-      let status = 'em_dia';
+    const carregarDados = () => {
+      let squadAtual = lerLGPD('@clearit-squad') || [];
       
-      if (!m.proxima_reuniao) {
-        status = 'atrasada';
-        atrasadas++;
-      } else {
-        if (m.proxima_reuniao.includes('/')) {
-          const [d, mes, a] = m.proxima_reuniao.split('/');
-          dataReuniao = new Date(`${a}-${mes}-${d}T00:00:00`);
-        } else {
-          dataReuniao = new Date(m.proxima_reuniao + 'T00:00:00');
-        }
+      if (squadAtual.length === 0) {
+        squadAtual = DB_SQUADS[idLider] || [];
+        salvarLGPD('@clearit-squad', squadAtual);
+      }
+      
+      const hoje = new Date();
+      hoje.setHours(0,0,0,0);
+      
+      let atrasadas = 0;
+      let noPrazo = 0;
+
+      const squadProcessado = squadAtual.map(m => {
+        let dataReuniao;
+        let status = 'em_dia';
         
-        if (dataReuniao < hoje) {
+        if (!m.proxima_reuniao) {
           status = 'atrasada';
           atrasadas++;
         } else {
-          noPrazo++;
+          if (m.proxima_reuniao.includes('/')) {
+            const [d, mes, a] = m.proxima_reuniao.split('/');
+            dataReuniao = new Date(`${a}-${mes}-${d}T00:00:00`);
+          } else {
+            dataReuniao = new Date(m.proxima_reuniao + 'T00:00:00');
+          }
+          
+          if (dataReuniao < hoje) {
+            status = 'atrasada';
+            atrasadas++;
+          } else {
+            noPrazo++;
+          }
         }
-      }
-      return { ...m, status, dataObjeto: dataReuniao };
-    });
+        return { ...m, status, dataObjeto: dataReuniao };
+      });
 
-    setSquad(squadProcessado);
+      setSquad(squadProcessado);
 
-    // 3. ATUALIZA XP E ATAS
-    const atas = lerLGPD('@clearit-atas-squad') || [];
-    const ranking = JSON.parse(localStorage.getItem('@clearit-ranking')) || {};
-    const meuXp = ranking[idLider] || 0;
+      const atas = lerLGPD('@clearit-atas-squad') || [];
+      const ranking = JSON.parse(localStorage.getItem('@clearit-ranking')) || {};
+      const meuXp = ranking[idLider] || 0;
 
-    setMetricas({ atrasadas, noPrazo, atasMes: atas.length, xp: meuXp });
+      setMetricas({ atrasadas, noPrazo, atasMes: atas.length, xp: meuXp });
+    };
+
+    carregarDados();
+    window.addEventListener('clearit-data-updated', carregarDados);
+    return () => window.removeEventListener('clearit-data-updated', carregarDados);
   }, [idLider]);
 
   const patente = metricas.xp >= 3000 ? 'Líder Referência 💎' : 'Líder Engajado 🚀';

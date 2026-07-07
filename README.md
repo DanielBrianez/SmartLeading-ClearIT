@@ -42,65 +42,70 @@ O projeto segue um padrão arquitetural desacoplado e orientado a domínios:
 
 ```text
 smart-leading-v2/
-├── backend/               # Motor API e integração com a IA
-│   ├── app/               # Rotas, controllers e ai_agent.py
-│   ├── .env               # Variáveis de ambiente (Chave da IA)
-│   └── requirements.txt   # Dependências do Python
+├── backend/                     # API e integração com IA
+│   ├── app/
+│   │   ├── main.py              # Endpoints FastAPI
+│   │   └── core/gemini.py      # Integração com Gemini
+│   ├── .env                     # Variáveis de ambiente locais
+│   ├── .env.example             # Exemplo de configuração
+│   └── requirements.txt         # Dependências do Python
 │
-├── frontend/              # Interface do Usuário (UI/UX)
-│   ├── src/               # Código fonte (Views, Components, Routing, Utilities)
-│   ├── package.json       # Dependências do Node.js
-│   └── tailwind.config.js # Regras de estilo corporativo
+├── frontend/                    # Interface do usuário
+│   ├── src/                     # Views, components, utilidades e rotas
+│   ├── package.json             # Dependências do Node.js
+│   └── vite.config.js           # Configuração do Vite
 │
-├── .agents/               # Diretrizes de comportamento da IA (AGENTS.md)
-├── business-context-lite.md  # Documentação de Produto (Dores e Soluções)
-└── technical-context-lite.md # Documentação de Engenharia e Diagrama Mermaid
+├── docs/                        # Contexto de produto, engenharia e ciclos Onion
+│   ├── business-context-lite.md
+│   ├── technical-context-lite.md
+│   ├── onion-cycles.md
+│   └── knowledge-base/
+│
+├── .agents/                     # Regras e comportamento do Onion para IDEs
+│   └── rules/onion.md
+│
+└── onion-portable/              # Versão portátil do framework Onion
+```
 
-##🚀 Como Rodar o Projeto Localmente
+## 🚀 Como Rodar o Projeto Localmente
 
-Para rodar o Smart Leading, você precisará inicializar o Back-end e o Front-end em terminais separados.
+Para rodar o Smart Leading, você precisará inicializar o back-end e o front-end em terminais separados.
 
-Passo 1: Inicializando o Back-end (Python/FastAPI)
-Abra o terminal e navegue até a pasta do servidor:
+### Passo 1: Back-end (Python/FastAPI)
 
-Bash
+Abra um terminal e navegue até a pasta do servidor:
+
+```bash
 cd backend
-Crie e ative um ambiente virtual (Recomendado):
-
-Bash
-# No Windows:
 python -m venv venv
 .\venv\Scripts\activate
-Instale as dependências:
-
-Bash
 pip install -r requirements.txt
-Configure as variáveis de ambiente:
+```
 
-Crie um arquivo chamado .env na raiz da pasta backend/.
+Crie um arquivo chamado `.env` na pasta `backend/` e adicione sua chave da API do Gemini:
 
-Adicione sua chave de API do Gemini:
+```env
 GEMINI_API_KEY="SUA_CHAVE_AQUI"
+```
 
-Rode o servidor:
+Inicie o servidor:
 
-Bash
+```bash
 uvicorn app.main:app --reload
-A API estará rodando em: http://localhost:8000
+```
 
-Passo 2: Inicializando o Front-end (React/Vite)
+A API estará disponível em: http://localhost:8000
+
+### Passo 2: Front-end (React/Vite)
+
 Abra um novo terminal e navegue até a pasta da interface:
 
-Bash
+```bash
 cd frontend
-Instale as dependências do Node:
-
-Bash
 npm install
-Inicie o servidor de desenvolvimento:
-
-Bash
 npm run dev
+```
+
 O sistema estará disponível em: http://localhost:5173
 
 ##💡 Dica de Demonstração (Demo Hack):

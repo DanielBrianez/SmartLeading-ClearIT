@@ -1,26 +1,13 @@
 // src/views/PainelRH.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
-  BarChart3, TrendingUp, Users, Target, 
-  FileText, Activity, HeartPulse, ShieldCheck, FilterX, MousePointerClick, CalendarDays
+  BarChart3, ShieldCheck, CalendarDays, FilterX, HeartPulse, TrendingUp, Users, Target, FileText, Activity, MousePointerClick
 } from 'lucide-react';
 import { DB_SQUADS } from '../dados';
 import { lerLGPD } from '../utils/security';
 
 export default function PainelRH() {
-  const [metricas, setMetricas] = useState({
-    atasGeradas: 0,
-    pdisAtivos: 0,
-    tasksConcluidas: 0
-  });
-
-  // ESTADOS DOS FILTROS (DASHBOARD)
-  const [tipoFiltroTempo, setTipoFiltroTempo] = useState('ANO'); // 'ANO', 'SEMESTRE', 'TRIMESTRE'
-  const [subFiltroTempo, setSubFiltroTempo] = useState('1'); // '1','2' para S; '1' a '4' para Q
-  const [mesSelecionado, setMesSelecionado] = useState(null); // Clique direto na barra
-  const chartRef = useRef(null);
-
-  const carregarDados = () => {
+  const calcularMetricas = () => {
     const atas = lerLGPD('@clearit-atas-squad') || [];
     const pdisSalvos = lerLGPD('@clearit-pdi') || [];    
     const pdisDeletados = lerLGPD('@clearit-deleted-pdi') || [];
@@ -32,7 +19,6 @@ export default function PainelRH() {
     let totalTasksConcluidas = 0;
 
     meuTime.forEach(membro => {
-      // PDIs
       const pdiBase = [
         { id: `estatico_pdi_1_${membro.id}`, status: 'Em andamento' },
         { id: `estatico_pdi_2_${membro.id}`, status: 'No prazo' }
@@ -46,7 +32,6 @@ export default function PainelRH() {
       const pdisAtivosDesteMembro = pdiCombinados.filter(p => !pdisDeletados.includes(p.id) && p.status !== 'Concluído');
       totalPdisAtivos += pdisAtivosDesteMembro.length;
 
-      // Tasks
       const tasksBase = membro.tarefas || [];
       const tasksSalvasDoMembro = tasksSalvas.filter(t => t.idLiderado === membro.id.toString());
       const savedTasksMap = new Map(tasksSalvasDoMembro.map(t => [t.id, t]));
@@ -58,17 +43,33 @@ export default function PainelRH() {
       totalTasksConcluidas += tasksConcluidasDesteMembro.length;
     });
 
-    setMetricas({
+    return {
       atasGeradas: atas.length,
       pdisAtivos: totalPdisAtivos,
       tasksConcluidas: totalTasksConcluidas
-    });
+    };
+  };
+
+  const [metricas, setMetricas] = useState(calcularMetricas);
+
+  // ESTADOS DOS FILTROS (DASHBOARD)
+  const [tipoFiltroTempo, setTipoFiltroTempo] = useState('ANO'); // 'ANO', 'SEMESTRE', 'TRIMESTRE'
+  const [subFiltroTempo, setSubFiltroTempo] = useState('1'); // '1','2' para S; '1' a '4' para Q
+  const [mesSelecionado, setMesSelecionado] = useState(null); // Clique direto na barra
+  const chartRef = useRef(null);
+
+  const carregarDados = () => {
+    setMetricas(calcularMetricas());
   };
 
   useEffect(() => {
     carregarDados();
     window.addEventListener('storage', carregarDados);
-    return () => window.removeEventListener('storage', carregarDados);
+    window.addEventListener('clearit-data-updated', carregarDados);
+    return () => {
+      window.removeEventListener('storage', carregarDados);
+      window.removeEventListener('clearit-data-updated', carregarDados);
+    };
   }, []);
 
   // Lógica para mudar a visualização do Dashboard

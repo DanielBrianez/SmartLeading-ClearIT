@@ -24,48 +24,53 @@ export default function HomeLiderado() {
   const [relevante, setRelevante] = useState('sim');
 
   useEffect(() => {
-    const chave = `@clearit-momento-${user.id}`;
-    const momentoSalvo = localStorage.getItem(chave);
-    if (momentoSalvo) setMeuMomento(momentoSalvo);
+    const carregarDados = () => {
+      const chave = `@clearit-momento-${user.id}`;
+      const momentoSalvo = localStorage.getItem(chave);
+      if (momentoSalvo) setMeuMomento(momentoSalvo);
 
-    let squads = lerLGPD('@clearit-squad') || [];
-    if (squads.length === 0) squads = Object.values(DB_SQUADS).flat();
+      let squads = lerLGPD('@clearit-squad') || [];
+      if (squads.length === 0) squads = Object.values(DB_SQUADS).flat();
 
-    const meusDados = squads.find(m => m.id.toString() === user.id.toString() || m.nome.includes(user.nome.split(' ')[0]));
-    
-    if (meusDados && meusDados.proxima_reuniao) {
-      const hoje = new Date();
-      hoje.setHours(0,0,0,0);
+      const meusDados = squads.find(m => m.id.toString() === user.id.toString() || m.nome.includes(user.nome.split(' ')[0]));
       
-      let objData;
-      if (meusDados.proxima_reuniao.includes('/')) {
-        const [d, mes, a] = meusDados.proxima_reuniao.split('/');
-        objData = new Date(`${a}-${mes}-${d}T00:00:00`);
+      if (meusDados && meusDados.proxima_reuniao) {
+        const hoje = new Date();
+        hoje.setHours(0,0,0,0);
+        
+        let objData;
+        if (meusDados.proxima_reuniao.includes('/')) {
+          const [d, mes, a] = meusDados.proxima_reuniao.split('/');
+          objData = new Date(`${a}-${mes}-${d}T00:00:00`);
+        } else {
+          objData = new Date(meusDados.proxima_reuniao + 'T00:00:00');
+        }
+
+        setDataReuniao(meusDados.proxima_reuniao.includes('-') ? meusDados.proxima_reuniao.split('-').reverse().join('/') : meusDados.proxima_reuniao);
+        setStatusReuniao(objData < hoje ? 'atrasada' : 'em_dia');
       } else {
-        objData = new Date(meusDados.proxima_reuniao + 'T00:00:00');
+        setDataReuniao('Não Agendada');
+        setStatusReuniao('atrasada');
       }
 
-      setDataReuniao(meusDados.proxima_reuniao.includes('-') ? meusDados.proxima_reuniao.split('-').reverse().join('/') : meusDados.proxima_reuniao);
-      setStatusReuniao(objData < hoje ? 'atrasada' : 'em_dia');
-    } else {
-      setDataReuniao('Não Agendada');
-      setStatusReuniao('atrasada');
-    }
+      const todasAtas = lerLGPD('@clearit-atas-squad') || [];
+      const pendentes = todasAtas.filter(a => a.idLiderado.toString() === user.id.toString() && a.feedbackPendente === true);
+      setAtasPendentes(pendentes);
 
-    const todasAtas = lerLGPD('@clearit-atas-squad') || [];
-    const pendentes = todasAtas.filter(a => a.idLiderado.toString() === user.id.toString() && a.feedbackPendente === true);
-    setAtasPendentes(pendentes);
+      const pdisTotais = lerLGPD('@clearit-pdi') || [];
+      const pdisDeletados = lerLGPD('@clearit-deleted-pdi') || [];
+      const pdisAtivos = pdisTotais.filter(p => p.idLiderado.toString() === user.id.toString() && !pdisDeletados.includes(p.id));
+      setMeusPdis(pdisAtivos.length);
 
-    const pdisTotais = lerLGPD('@clearit-pdi') || [];
-    const pdisDeletados = lerLGPD('@clearit-deleted-pdi') || [];
-    const pdisAtivos = pdisTotais.filter(p => p.idLiderado.toString() === user.id.toString() && !pdisDeletados.includes(p.id));
-    setMeusPdis(pdisAtivos.length);
+      const tarefasTotais = lerLGPD('@clearit-tasks') || [];
+      const tarefasDeletadas = lerLGPD('@clearit-deleted-tasks') || [];
+      const tarefasAtivas = tarefasTotais.filter(t => t.idLiderado.toString() === user.id.toString() && !tarefasDeletadas.includes(t.id) && t.status !== 'Concluído');
+      setMinhasTarefas(tarefasAtivas.length);
+    };
 
-    const tarefasTotais = lerLGPD('@clearit-tasks') || [];
-    const tarefasDeletadas = lerLGPD('@clearit-deleted-tasks') || [];
-    const tarefasAtivas = tarefasTotais.filter(t => t.idLiderado.toString() === user.id.toString() && !tarefasDeletadas.includes(t.id) && t.status !== 'Concluído');
-    setMinhasTarefas(tarefasAtivas.length);
-    
+    carregarDados();
+    window.addEventListener('clearit-data-updated', carregarDados);
+    return () => window.removeEventListener('clearit-data-updated', carregarDados);
   }, [user.id, user.nome]);
 
   const handleSalvarMomento = (e) => {

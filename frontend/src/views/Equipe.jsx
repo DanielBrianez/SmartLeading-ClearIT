@@ -1,5 +1,4 @@
 import { TEAM_MEMBERS } from '../dados';
-import { Users, User, Mail } from 'lucide-react';
 
 export default function Equipe() {
   return (

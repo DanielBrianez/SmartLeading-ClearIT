@@ -1,11 +1,11 @@
 // src/views/MeuSquad.jsx
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import html2pdf from 'html2pdf.js';
 import ReactMarkdown from 'react-markdown';
 import { 
-  Users, Search, User, Briefcase, Clock, 
-  Target, ListTodo, TrendingUp, X, Calendar, ChevronRight, 
-  MessageSquare, CalendarPlus, Activity, Zap, CheckCircle2, 
+  Users, Search, Briefcase, Clock, 
+  Target, TrendingUp, X, Calendar, ChevronRight, 
+  MessageSquare, CalendarPlus, CheckCircle2, Activity,
   Circle, AlertCircle, CheckSquare, Download, FileText, 
   Award, Map as MapIcon, Plus, Trash2, Pencil, Hash
 } from 'lucide-react';
@@ -40,28 +40,33 @@ export default function MeuSquad({ setAbaAtiva }) {
   const [balaoAviso, setBalaoAviso] = useState({ visivel: false, mensagem: '' });
 
   useEffect(() => {
-    let squadAtual = lerLGPD('@clearit-squad') || [];
-    if (squadAtual.length === 0) squadAtual = DB_SQUADS[idLiderLogado] || [];
-    
-    // Atualiza a 'ultimaReuniao' baseada nas atas reais
-    const atas = lerLGPD('@clearit-atas-squad') || [];
-    setTodasAtas(atas);
+    const carregarDados = () => {
+      let squadAtual = lerLGPD('@clearit-squad') || [];
+      if (squadAtual.length === 0) squadAtual = DB_SQUADS[idLiderLogado] || [];
+      
+      const atas = lerLGPD('@clearit-atas-squad') || [];
+      setTodasAtas(atas);
 
-    const timeAtualizado = squadAtual.map(membro => {
-      const atasDoMembro = atas.filter(a => a.idLiderado === membro.id.toString());
-      let dataReal = membro.ultimaReuniao;
-      if (atasDoMembro.length > 0) {
-        const partes = atasDoMembro[0].data.split('/');
-        if(partes.length === 3) dataReal = `${partes[2]}-${partes[1]}-${partes[0]}`;
-      }
-      return { ...membro, ultimaReuniao: dataReal };
-    });
+      const timeAtualizado = squadAtual.map(membro => {
+        const atasDoMembro = atas.filter(a => a.idLiderado === membro.id.toString());
+        let dataReal = membro.ultimaReuniao;
+        if (atasDoMembro.length > 0) {
+          const partes = atasDoMembro[0].data.split('/');
+          if(partes.length === 3) dataReal = `${partes[2]}-${partes[1]}-${partes[0]}`;
+        }
+        return { ...membro, ultimaReuniao: dataReal };
+      });
 
-    setSquad(timeAtualizado);
-    setTasksSalvas(lerLGPD('@clearit-tasks') || []);
-    setTasksDeletadas(lerLGPD('@clearit-deleted-tasks') || []);
-    setPdiSalvos(lerLGPD('@clearit-pdi') || []);
-    setPdiDeletados(lerLGPD('@clearit-deleted-pdi') || []);
+      setSquad(timeAtualizado);
+      setTasksSalvas(lerLGPD('@clearit-tasks') || []);
+      setTasksDeletadas(lerLGPD('@clearit-deleted-tasks') || []);
+      setPdiSalvos(lerLGPD('@clearit-pdi') || []);
+      setPdiDeletados(lerLGPD('@clearit-deleted-pdi') || []);
+    };
+
+    carregarDados();
+    window.addEventListener('clearit-data-updated', carregarDados);
+    return () => window.removeEventListener('clearit-data-updated', carregarDados);
   }, []);
 
   const mostrarBalao = (mensagem) => {
@@ -182,7 +187,6 @@ export default function MeuSquad({ setAbaAtiva }) {
       return;
     }
 
-    let atualizados = [...pdiSalvos];
     const dataCalculo = new Date(); 
     let mesesParaAdicionar = 0;
     
@@ -191,21 +195,24 @@ export default function MeuSquad({ setAbaAtiva }) {
     else if (novoPDI.prazo === '3 meses') mesesParaAdicionar = 3;
     else if (novoPDI.prazo === '6 meses') mesesParaAdicionar = 6;
 
+    const pdiParaSalvar = { ...novoPDI };
+
     if (mesesParaAdicionar > 0) {
       dataCalculo.setMonth(dataCalculo.getMonth() + mesesParaAdicionar);
       const nomesMeses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-      novoPDI.dataExpiracaoTs = dataCalculo.getTime(); 
-      novoPDI.prazoDisplay = `${novoPDI.prazo} (${nomesMeses[dataCalculo.getMonth()]}/${dataCalculo.getFullYear()})`;
+      pdiParaSalvar.dataExpiracaoTs = dataCalculo.getTime(); 
+      pdiParaSalvar.prazoDisplay = `${pdiParaSalvar.prazo} (${nomesMeses[dataCalculo.getMonth()]}/${dataCalculo.getFullYear()})`;
     } else {
-      novoPDI.prazoDisplay = novoPDI.prazo; 
+      pdiParaSalvar.prazoDisplay = pdiParaSalvar.prazo; 
     }
 
-    if (novoPDI.id) {
-      const index = atualizados.findIndex(p => p.id === novoPDI.id);
-      if (index !== -1) atualizados[index] = { ...novoPDI, idLiderado: membroSelecionado.id.toString() };
-      else atualizados.push({ ...novoPDI, idLiderado: membroSelecionado.id.toString() });
+    let atualizados = [...pdiSalvos];
+    if (pdiParaSalvar.id) {
+      const index = atualizados.findIndex(p => p.id === pdiParaSalvar.id);
+      if (index !== -1) atualizados[index] = { ...pdiParaSalvar, idLiderado: membroSelecionado.id.toString() };
+      else atualizados.push({ ...pdiParaSalvar, idLiderado: membroSelecionado.id.toString() });
     } else {
-      atualizados.push({ ...novoPDI, id: `pdi_${Date.now()}`, idLiderado: membroSelecionado.id.toString() });
+      atualizados.push({ ...pdiParaSalvar, id: `pdi_${Date.now()}`, idLiderado: membroSelecionado.id.toString() });
     }
 
     setPdiSalvos(atualizados);

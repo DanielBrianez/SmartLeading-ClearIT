@@ -1,9 +1,9 @@
 // src/views/HomeRH.jsx
 import React, { useState, useEffect } from 'react';
 import { 
-  PieChart, Users, AlertTriangle, TrendingUp, 
+  PieChart, Users, AlertTriangle, 
   HeartPulse, Target, Calendar, ShieldCheck, Download, 
-  Activity, ArrowUpRight, Search, Loader2
+  Search, Loader2
 } from 'lucide-react';
 import { lerLGPD } from '../utils/security';
 import { DB_SQUADS } from '../dados';
@@ -25,95 +25,101 @@ export default function HomeRH() {
   const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
-    let empresaGlobal = [];
-    const lideresMap = {}; 
+    const carregarDados = () => {
+      let empresaGlobal = [];
+      const lideresMap = {};
 
-    Object.keys(DB_SQUADS).forEach(idLider => {
-      const nomeLider = idLider === 'daniel_nascimento' ? 'Daniel Nascimento' : 
-                        idLider === 'juliana_castro' ? 'Juliana Castro' : 
-                        idLider.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
-                        
-      lideresMap[idLider] = { id: idLider, nome: nomeLider, totalLiderados: 0, atrasadas: 0 };
-      
-      DB_SQUADS[idLider].forEach(membro => {
-        empresaGlobal.push({ ...membro, idLider, nomeLider });
+      Object.keys(DB_SQUADS).forEach(idLider => {
+        const nomeLider = idLider === 'daniel_nascimento' ? 'Daniel Nascimento' :
+          idLider === 'juliana_castro' ? 'Juliana Castro' :
+          idLider.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+        lideresMap[idLider] = { id: idLider, nome: nomeLider, totalLiderados: 0, atrasadas: 0 };
+
+        DB_SQUADS[idLider].forEach(membro => {
+          empresaGlobal.push({ ...membro, idLider, nomeLider });
+        });
       });
-    });
 
-    const squadSalvo = lerLGPD('@clearit-squad') || [];
-    empresaGlobal = empresaGlobal.map(membroBase => {
-      const atualizacao = squadSalvo.find(s => s.id === membroBase.id);
-      return atualizacao ? { ...membroBase, ...atualizacao } : membroBase;
-    });
+      const squadSalvo = lerLGPD('@clearit-squad') || [];
+      empresaGlobal = empresaGlobal.map(membroBase => {
+        const atualizacao = squadSalvo.find(s => s.id === membroBase.id);
+        return atualizacao ? { ...membroBase, ...atualizacao } : membroBase;
+      });
 
-    const hoje = new Date();
-    hoje.setHours(0,0,0,0);
-    let emDia = 0;
-    let atrasadas = 0;
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+      let emDia = 0;
+      let atrasadas = 0;
+      let sMotivado = 0;
+      let sFocado = 0;
+      let sBloqueado = 0;
+      let sSobrecarga = 0;
 
-    empresaGlobal.forEach(membro => {
-      lideresMap[membro.idLider].totalLiderados += 1;
-      let status = 'em_dia';
-      
-      if (!membro.proxima_reuniao) {
-        status = 'atrasada';
-      } else {
-        let dataCalculada;
-        if (membro.proxima_reuniao.includes('/')) {
-          const [d, mes, a] = membro.proxima_reuniao.split('/');
-          dataCalculada = new Date(`${a}-${mes}-${d}T00:00:00`);
+      empresaGlobal.forEach(membro => {
+        lideresMap[membro.idLider].totalLiderados += 1;
+        let status = 'em_dia';
+
+        if (!membro.proxima_reuniao) {
+          status = 'atrasada';
         } else {
-          dataCalculada = new Date(membro.proxima_reuniao + 'T00:00:00');
+          let dataCalculada;
+          if (membro.proxima_reuniao.includes('/')) {
+            const [d, mes, a] = membro.proxima_reuniao.split('/');
+            dataCalculada = new Date(`${a}-${mes}-${d}T00:00:00`);
+          } else {
+            dataCalculada = new Date(membro.proxima_reuniao + 'T00:00:00');
+          }
+          if (dataCalculada < hoje) status = 'atrasada';
         }
-        if (dataCalculada < hoje) status = 'atrasada';
-      }
 
-      if (status === 'atrasada') {
-        atrasadas++;
-        lideresMap[membro.idLider].atrasadas += 1;
-      } else {
-        emDia++;
-      }
-    });
+        if (status === 'atrasada') {
+          atrasadas++;
+          lideresMap[membro.idLider].atrasadas += 1;
+        } else {
+          emDia++;
+        }
 
-    setCadencia({ emDia, atrasadas, total: empresaGlobal.length });
+        const idLoginFalback = membro.nome.toLowerCase().replace(/ /g, '_');
+        const momentoAtual = localStorage.getItem(`@clearit-momento-${membro.id}`) ||
+          localStorage.getItem(`@clearit-momento-${idLoginFalback}`);
 
-    let sMotivado = 0; let sFocado = 0; let sBloqueado = 0; let sSobrecarga = 0;
-    
-    empresaGlobal.forEach(membro => {
-      const idLoginFalback = membro.nome.toLowerCase().replace(' ', '_');
-      const momentoAtual = localStorage.getItem(`@clearit-momento-${membro.id}`) || 
-                           localStorage.getItem(`@clearit-momento-${idLoginFalback}`);
-      
-      if (momentoAtual) {
-        if (momentoAtual.includes('Motivado')) sMotivado++;
-        else if (momentoAtual.includes('Focado')) sFocado++;
-        else if (momentoAtual.includes('bloqueado') || momentoAtual.includes('ajuda')) sBloqueado++;
-        else if (momentoAtual.includes('Sobrecarga') || momentoAtual.includes('Cansado')) sSobrecarga++;
-      } else {
-        sFocado++;
-      }
-    });
+        if (momentoAtual) {
+          if (momentoAtual.includes('Motivado')) sMotivado++;
+          else if (momentoAtual.includes('Focado')) sFocado++;
+          else if (momentoAtual.includes('bloqueado') || momentoAtual.includes('ajuda')) sBloqueado++;
+          else if (momentoAtual.includes('Sobrecarga') || momentoAtual.includes('Cansado')) sSobrecarga++;
+        } else {
+          sFocado++;
+        }
+      });
 
-    setSentimento({ motivado: sMotivado, focado: sFocado, bloqueado: sBloqueado, sobrecarga: sSobrecarga });
+      const atas = lerLGPD('@clearit-atas-squad') || [];
+      const pdis = lerLGPD('@clearit-pdi') || [];
+      const pdisDeletados = lerLGPD('@clearit-deleted-pdi') || [];
+      const pdisAtivosCount = pdis.filter(p => p.status !== 'Concluído' && !pdisDeletados.includes(p.id)).length;
+      const pdisMockBase = empresaGlobal.length * 2;
 
-    const atas = lerLGPD('@clearit-atas-squad') || [];
-    const pdis = lerLGPD('@clearit-pdi') || [];
-    const pdisDeletados = lerLGPD('@clearit-deleted-pdi') || [];
-    const pdisAtivosCount = pdis.filter(p => p.status !== 'Concluído' && !pdisDeletados.includes(p.id)).length;
-    
-    const pdisMockBase = empresaGlobal.length * 2; 
+      setCadencia({ emDia, atrasadas, total: empresaGlobal.length });
+      setSentimento({ motivado: sMotivado, focado: sFocado, bloqueado: sBloqueado, sobrecarga: sSobrecarga });
+      setMetricas({
+        totalColaboradores: empresaGlobal.length,
+        pdisAtivos: pdisAtivosCount > 0 ? pdisAtivosCount : pdisMockBase,
+        atasGeradas: atas.length > 0 ? atas.length : Math.floor(empresaGlobal.length * 0.8)
+      });
 
-    setMetricas({
-      totalColaboradores: empresaGlobal.length,
-      pdisAtivos: pdisAtivosCount > 0 ? pdisAtivosCount : pdisMockBase,
-      atasGeradas: atas.length > 0 ? atas.length : Math.floor(empresaGlobal.length * 0.8)
-    });
+      const arrayLideresRisco = Object.values(lideresMap).filter(l => l.atrasadas > 0);
+      arrayLideresRisco.sort((a, b) => b.atrasadas - a.atrasadas);
+      setLideresRisco(arrayLideresRisco);
+    };
 
-    const arrayLideresRisco = Object.values(lideresMap).filter(l => l.atrasadas > 0);
-    arrayLideresRisco.sort((a, b) => b.atrasadas - a.atrasadas);
-    setLideresRisco(arrayLideresRisco);
-
+    carregarDados();
+    window.addEventListener('clearit-data-updated', carregarDados);
+    window.addEventListener('storage', carregarDados);
+    return () => {
+      window.removeEventListener('clearit-data-updated', carregarDados);
+      window.removeEventListener('storage', carregarDados);
+    };
   }, []);
 
   const totalSentimento = sentimento.motivado + sentimento.focado + sentimento.bloqueado + sentimento.sobrecarga || 1;

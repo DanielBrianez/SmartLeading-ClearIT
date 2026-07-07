@@ -1,8 +1,8 @@
 // src/views/Meus1a1.jsx
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Bot, Send, FileText, Download, Loader2, 
-  User, CheckCircle2, AlertCircle, Briefcase, Eye, EyeOff, TrendingUp, Lock, ShieldCheck
+  User, CheckCircle2, AlertCircle, Briefcase, TrendingUp, Lock, ShieldCheck, EyeOff
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import html2pdf from 'html2pdf.js';
@@ -10,27 +10,11 @@ import { DB_SQUADS } from '../dados';
 
 import { salvarLGPD, lerLGPD } from '../utils/security';
 
-export default function Meus1a1({ lideradoPreSelecionado, setAbaAtiva }) { 
+export default function Meus1a1({ setAbaAtiva }) { 
   const idLiderLogado = "daniel_nascimento";
   const nomeLiderLogado = "DANIEL NASCIMENTO DOS SANTOS FILHO";
   
   const meuSquad = DB_SQUADS[idLiderLogado] || [];
-
-  const [lideradoSelecionado, setLideradoSelecionado] = useState(null);
-  
-  // Variáveis ocultas da UI, mas enviadas para a IA (Contexto Preservado)
-  const [senioridade, setSenioridade] = useState('');
-  const [tempoCasa, setTempoCasa] = useState('');
-  const [perfilLider, setPerfilLider] = useState(localStorage.getItem('@clearit-perfil-config') || 'Técnico');
-  
-  const [perfilLiderado, setPerfilLiderado] = useState(''); 
-  const [entregas, setEntregas] = useState('');
-  
-  const [loading, setLoading] = useState(false);
-  const [resultado, setResultado] = useState('');
-  const [erro, setErro] = useState('');
-  const [toast, setToast] = useState({ visivel: false, mensagem: '', icone: null });
-  const [abaDocumento, setAbaDocumento] = useState('roteiro');
 
   const buscarMomentoDoLiderado = (liderado) => {
     if (!liderado) return '';
@@ -41,32 +25,58 @@ export default function Meus1a1({ lideradoPreSelecionado, setAbaAtiva }) {
            'Aguardando preenchimento...';
   };
 
-  React.useEffect(() => {
+  const obterSelecaoInicial = () => {
+    const idFoco = localStorage.getItem('@clearit-liderado-foco');
+    const idParaBuscar = idFoco || null;
+    if (!idParaBuscar || meuSquad.length === 0) return null;
+    return meuSquad.find(m => m.id.toString() === idParaBuscar.toString()) || null;
+  };
+
+  const [lideradoSelecionado, setLideradoSelecionado] = useState(obterSelecaoInicial);
+  
+  // Variáveis ocultas da UI, mas enviadas para a IA (Contexto Preservado)
+  const [senioridade, setSenioridade] = useState(() => {
+    const liderado = obterSelecaoInicial();
+    return liderado?.senioridade || '';
+  });
+  const [tempoCasa, setTempoCasa] = useState(() => {
+    const liderado = obterSelecaoInicial();
+    return liderado?.tempoCasa || '';
+  });
+  const [perfilLider, setPerfilLider] = useState(localStorage.getItem('@clearit-perfil-config') || 'Técnico');
+  
+  const [perfilLiderado, setPerfilLiderado] = useState(() => {
+    const liderado = obterSelecaoInicial();
+    return liderado ? buscarMomentoDoLiderado(liderado) : '';
+  }); 
+  const [entregas, setEntregas] = useState('');
+  
+  const [loading, setLoading] = useState(false);
+  const [resultado, setResultado] = useState('');
+  const [erro, setErro] = useState('');
+  const [toast, setToast] = useState({ visivel: false, mensagem: '', icone: null });
+  const [abaDocumento, setAbaDocumento] = useState('roteiro');
+
+  useEffect(() => {
     const atualizarPerfil = () => {
       const perfilSalvo = localStorage.getItem('@clearit-perfil-config');
       if (perfilSalvo) setPerfilLider(perfilSalvo);
     };
 
+    const atualizarDados = () => {
+      const lideradoAtual = obterSelecaoInicial();
+      setPerfilLiderado(lideradoAtual ? buscarMomentoDoLiderado(lideradoAtual) : '');
+    };
+
     atualizarPerfil();
+    atualizarDados();
     window.addEventListener('perfil-atualizado', atualizarPerfil);
-    return () => window.removeEventListener('perfil-atualizado', atualizarPerfil);
+    window.addEventListener('clearit-data-updated', atualizarDados);
+    return () => {
+      window.removeEventListener('perfil-atualizado', atualizarPerfil);
+      window.removeEventListener('clearit-data-updated', atualizarDados);
+    };
   }, []);
-
-  React.useEffect(() => {
-    const idFoco = localStorage.getItem('@clearit-liderado-foco');
-    const idParaBuscar = idFoco || lideradoPreSelecionado;
-
-    if (idParaBuscar && meuSquad.length > 0) {
-      const liderado = meuSquad.find(m => m.id.toString() === idParaBuscar.toString());
-      if (liderado) {
-        setLideradoSelecionado(liderado);
-        setSenioridade(liderado.senioridade);
-        setTempoCasa(liderado.tempoCasa);
-        setPerfilLiderado(buscarMomentoDoLiderado(liderado)); 
-      }
-      if (idFoco) localStorage.removeItem('@clearit-liderado-foco');
-    }
-  }, [lideradoPreSelecionado, meuSquad]);
 
   const mostrarToast = (mensagem, icone = 'check') => {
     setToast({ visivel: true, mensagem, icone });
@@ -329,7 +339,7 @@ ${textoLimpo}
               </span>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Senioridade</label>
                 <div className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-600 dark:text-slate-400 flex items-center gap-2 cursor-not-allowed">
@@ -339,7 +349,7 @@ ${textoLimpo}
               </div>
               
               <div>
-                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1 flex justify-between items-center">
+                <label className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-1 flex justify-between items-center">
                   <span>Status do Liderado</span>
                   <span className="text-[10px] text-blue-500 font-semibold bg-blue-50 px-1.5 py-0.5 rounded flex items-center gap-1">
                     <Lock className="w-3 h-3" /> Sinc.
@@ -360,7 +370,7 @@ ${textoLimpo}
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1 mt-1 flex justify-between">
+              <label className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-1 mt-1 flex justify-between">
                 Foco / Entregas Recentes
                 <span className="text-[10px] font-medium text-slate-400 flex items-center gap-1">
                   Valores financeiros e CPFs serão anonimizados

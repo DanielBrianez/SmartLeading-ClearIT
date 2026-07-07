@@ -1,8 +1,7 @@
 // src/views/Ranking.jsx
-import React, { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { 
-  Trophy, Medal, Zap, Filter, Target, FileText, 
-  Activity, Crown, Star, TrendingUp, Lock 
+  Filter, Crown, Star, Lock, TrendingUp, Activity, FileText, Target, Zap 
 } from 'lucide-react';
 import minhaFoto from '../assets/daniel-foto.jpg'; 
 import { DB_SQUADS } from '../dados'; 
@@ -11,9 +10,14 @@ import { lerLGPD } from '../utils/security';
 export default function Ranking() {
   const user = lerLGPD('@clearit-session') || { id: 'daniel_nascimento', nome: 'Daniel Nascimento', role: 'LIDER' };
 
-  const [lideres, setLideres] = useState([]);
   const [areaFiltro, setAreaFiltro] = useState('Todas');
-  const [meuProgresso, setMeuProgresso] = useState({ xp: 0, patente: 'Bronze', porcentagem: 0, xpProxNivel: 1000 });
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    const atualizarDados = () => setRefreshKey(prev => prev + 1);
+    window.addEventListener('clearit-data-updated', atualizarDados);
+    return () => window.removeEventListener('clearit-data-updated', atualizarDados);
+  }, []);
 
   const calcularPatente = (xp) => {
     if (xp >= 3000) return { nome: 'Diamante 💎', cor: 'text-cyan-400', bg: 'bg-cyan-100 dark:bg-cyan-900/30', border: 'border-cyan-200 dark:border-cyan-800', prox: 99999 };
@@ -22,14 +26,12 @@ export default function Ranking() {
     return { nome: 'Bronze 🥉', cor: 'text-orange-700 dark:text-orange-500', bg: 'bg-orange-50 dark:bg-orange-900/20', border: 'border-orange-200 dark:border-orange-900/50', prox: 500 };
   };
 
-  useEffect(() => {
-    // 1. Abre os cofres do navegador
+  const rankingData = useMemo(() => {
     const rankingSalvo = JSON.parse(localStorage.getItem('@clearit-ranking')) || {};
     const atasSalvas = lerLGPD('@clearit-atas-squad') || [];
     const pdisSalvos = lerLGPD('@clearit-pdi') || [];
     const pdisDeletados = lerLGPD('@clearit-deleted-pdi') || []; 
     
-    // 2. Calcula os dados reais do Daniel
     const xpGanho = rankingSalvo['daniel_nascimento'] || 0;
     const atasGeradas = atasSalvas.filter(a => a.idLider === 'daniel_nascimento' || !a.idLider).length;
     
@@ -57,7 +59,6 @@ export default function Ranking() {
     const pdisAtivos = totalPdisAtivos;
     const ritosRealizados = atasGeradas + meuTime.length; 
 
-    // 3. Base de Competidores Mockada
     const baseCompetidores = [
       { id: 'daniel_nascimento', nome: 'Daniel Nascimento', cargo: 'Tech Lead', area: 'Engenharia', foto: minhaFoto, atasBase: 0, pdisBase: 0, ritosBase: 0, xpBase: 0 },
       { id: 'juliana_castro', nome: 'Juliana Castro', cargo: 'Tech Lead', area: 'Produto', atasBase: 12, pdisBase: 4, ritosBase: 15, xpBase: 1450 },
@@ -66,7 +67,6 @@ export default function Ranking() {
       { id: 'roberto_alves', nome: 'Roberto Alves', cargo: 'Tech Lead', area: 'Engenharia', atasBase: 15, pdisBase: 5, ritosBase: 18, xpBase: 2150 }
     ];
 
-    // 4. Atualiza os dados mesclando
     let dadosAtualizados = baseCompetidores.map(lider => {
       const isLogado = lider.id === 'daniel_nascimento';
       const xpLocal = rankingSalvo[lider.id];
@@ -86,33 +86,33 @@ export default function Ranking() {
       };
     });
 
-    // 5. Ordenação e Desempate
     dadosAtualizados.sort((a, b) => {
       if (b.xpTotal !== a.xpTotal) return b.xpTotal - a.xpTotal; 
       return b.atasTotal - a.atasTotal; 
     });
 
-    // 6. Aplica Patente e Posição
     const rankingFinal = dadosAtualizados.map((lider, index) => ({
       ...lider,
       posicao: index + 1,
       patente: calcularPatente(lider.xpTotal)
     }));
 
-    setLideres(rankingFinal);
-
-    // 7. Calcula o progresso do usuário logado
     const meusDados = rankingFinal.find(l => l.id === user.id) || { xpTotal: 0, patente: calcularPatente(0) };
     const porcentagem = (meusDados.xpTotal / meusDados.patente.prox) * 100;
 
-    setMeuProgresso({
-      xp: meusDados.xpTotal,
-      patente: meusDados.patente,
-      porcentagem: Math.min(100, porcentagem),
-      xpProxNivel: meusDados.patente.prox
-    });
+    return {
+      lideres: rankingFinal,
+      meuProgresso: {
+        xp: meusDados.xpTotal,
+        patente: meusDados.patente,
+        porcentagem: Math.min(100, porcentagem),
+        xpProxNivel: meusDados.patente.prox
+      }
+    };
+  }, [user.id, refreshKey]);
 
-  }, [user.id]);
+  const lideres = rankingData.lideres;
+  const meuProgresso = rankingData.meuProgresso;
 
   if (user.role === 'LIDERADO') {
     return (

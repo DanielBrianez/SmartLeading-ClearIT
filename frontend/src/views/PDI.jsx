@@ -1,38 +1,31 @@
 // src/views/PDI.jsx
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { 
   Target, Plus, CheckCircle2, Trash2, User, Clock, 
-  AlertTriangle, ShieldCheck, TrendingUp, Info
+  ShieldCheck, TrendingUp
 } from 'lucide-react';
 import { lerLGPD, salvarLGPD } from '../utils/security';
 import { DB_SQUADS } from '../dados';
 
 export default function PDI() {
   const idLiderLogado = "daniel_nascimento";
+
+  const carregarSquadInicial = () => {
+    let squads = lerLGPD('@clearit-squad') || [];
+    if (squads.length === 0) squads = DB_SQUADS[idLiderLogado] || [];
+    return squads.filter(m => DB_SQUADS[idLiderLogado]?.find(mock => mock.id === m.id) || m.idLider === idLiderLogado) || DB_SQUADS[idLiderLogado];
+  };
   
-  const [meuSquad, setMeuSquad] = useState([]);
+  const [meuSquad] = useState(carregarSquadInicial);
   const [lideradoSelecionado, setLideradoSelecionado] = useState('');
   
-  const [pdis, setPdis] = useState([]);
-  const [pdisDeletados, setPdisDeletados] = useState([]);
+  const [pdis, setPdis] = useState(() => lerLGPD('@clearit-pdi') || []);
+  const [pdisDeletados, setPdisDeletados] = useState(() => lerLGPD('@clearit-deleted-pdi') || []);
   
   // Estado do Formulário
   const [novaAcao, setNovaAcao] = useState('');
   const [novaDescricao, setNovaDescricao] = useState('');
   const [novoPrazo, setNovoPrazo] = useState('');
-
-  useEffect(() => {
-    // Carrega o Squad
-    let squads = lerLGPD('@clearit-squad') || [];
-    if (squads.length === 0) squads = DB_SQUADS[idLiderLogado] || [];
-    
-    // Filtra apenas os liderados do líder logado (no nosso caso mockado, pega o time base)
-    setMeuSquad(squads.filter(m => DB_SQUADS[idLiderLogado]?.find(mock => mock.id === m.id) || m.idLider === idLiderLogado) || DB_SQUADS[idLiderLogado]);
-
-    // Carrega os PDIs
-    setPdis(lerLGPD('@clearit-pdi') || []);
-    setPdisDeletados(lerLGPD('@clearit-deleted-pdi') || []);
-  }, []);
 
   // Filtra os PDIs do liderado selecionado
   const pdisDoLiderado = pdis.filter(p => p.idLiderado === lideradoSelecionado && !pdisDeletados.includes(p.id));
@@ -156,7 +149,7 @@ export default function PDI() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
                     <span>Descrição / Como Medir</span>
                     <span className="text-[10px] text-blue-500">Seja específico</span>
                   </label>
