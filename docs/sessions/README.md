@@ -8,7 +8,7 @@ Este diretório armazena o histórico e o progresso de cada sessão de desenvolv
 
 | ID | Data e Hora | Tópico/Funcionalidade | Objetivo Principal | Link |
 |---|---|---|---|---|
-| S-01 | 2026-06-29 18:15 | Bootstrap & Análise de Gaps | Setup do Onion Portable no ClearIT e mapeamento de divergências do código | [Ver Sessão](./2026-06-29_1815_bootstrap-e-analise-de-gaps/README.md) |
+| - | - | - | - | - |
 
 
 ---
