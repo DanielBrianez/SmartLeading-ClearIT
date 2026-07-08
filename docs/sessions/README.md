@@ -8,7 +8,7 @@ Este diretório armazena o histórico e o progresso de cada sessão de desenvolv
 
 | ID | Data e Hora | Tópico/Funcionalidade | Objetivo Principal | Link |
 |---|---|---|---|---|
-| - | - | - | - | - |
+| `2026-07-08_1857_analise-de-gaps-de-dados` | 08/07/2026 18:57 | Análise de Gaps de Dados | Comparação de dados requeridos vs. implementação atual | [Ver Sessão](./2026-07-08_1857_analise-de-gaps-de-dados/README.md) |
 
 
 ---
