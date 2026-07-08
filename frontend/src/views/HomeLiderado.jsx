@@ -11,6 +11,7 @@ export default function HomeLiderado() {
   const user = lerLGPD('@clearit-session') || { id: 'carlos_eduardo', nome: 'Carlos Eduardo' };
   
   const [meuMomento, setMeuMomento] = useState('');
+  const [pautaPrevia, setPautaPrevia] = useState('');
   const [dataReuniao, setDataReuniao] = useState('Buscando...');
   const [statusReuniao, setStatusReuniao] = useState('em_dia');
   const [atasPendentes, setAtasPendentes] = useState([]);
@@ -19,9 +20,53 @@ export default function HomeLiderado() {
   const [meusPdis, setMeusPdis] = useState(0);
   const [minhasTarefas, setMinhasTarefas] = useState(0);
   
+  // Detalhes de Carreira (PDI e Acordos)
+  const [meusDados, setMeusDados] = useState(null);
+  const [detalhePdi, setDetalhePdi] = useState({ objetivo: '', foco: '', competencias: [] });
+  const [listaPdis, setListaPdis] = useState([]);
+  const [listaTarefas, setListaTarefas] = useState([]);
+  
   // Estados para o form de feedback
   const [notaAtual, setNotaAtual] = useState(5);
   const [relevante, setRelevante] = useState('sim');
+
+  const [enviandoTeams, setEnviandoTeams] = useState(false);
+  const [teamsEnviado, setTeamsEnviado] = useState(false);
+
+  const handleSalvarPautaPrevia = (e) => {
+    const valor = e.target.value;
+    setPautaPrevia(valor);
+    localStorage.setItem(`@clearit-pauta-previa-${user.id}`, valor);
+  };
+
+  const notificarPautaNoTeams = async () => {
+    setEnviandoTeams(true);
+    try {
+      const dataReuniaoExibicao = dataReuniao || 'Hoje';
+      
+      const response = await fetch('http://localhost:8000/api/notificar-teams', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lider_nome: "DANIEL NASCIMENTO",
+          liderado_nome: user.nome,
+          data_reuniao: dataReuniaoExibicao,
+          sentimento: meuMomento,
+          pauta_liderado: pautaPrevia,
+          pdis_ativos: listaPdis.length,
+          acordos_ativos: listaTarefas.length
+        })
+      });
+      if (response.ok) {
+        setTeamsEnviado(true);
+        setTimeout(() => setTeamsEnviado(false), 5000);
+      }
+    } catch (err) {
+      console.log('Erro ao enviar Teams:', err);
+    } finally {
+      setEnviandoTeams(false);
+    }
+  };
 
   useEffect(() => {
     const carregarDados = () => {
@@ -29,24 +74,28 @@ export default function HomeLiderado() {
       const momentoSalvo = localStorage.getItem(chave);
       if (momentoSalvo) setMeuMomento(momentoSalvo);
 
+      const pautaSalva = localStorage.getItem(`@clearit-pauta-previa-${user.id}`);
+      if (pautaSalva) setPautaPrevia(pautaSalva);
+
       let squads = lerLGPD('@clearit-squad') || [];
       if (squads.length === 0) squads = Object.values(DB_SQUADS).flat();
 
-      const meusDados = squads.find(m => m.id.toString() === user.id.toString() || m.nome.includes(user.nome.split(' ')[0]));
+      const dadosMembro = squads.find(m => m.id.toString() === user.id.toString() || m.nome.includes(user.nome.split(' ')[0]));
+      setMeusDados(dadosMembro);
       
-      if (meusDados && meusDados.proxima_reuniao) {
+      if (dadosMembro && dadosMembro.proxima_reuniao) {
         const hoje = new Date();
         hoje.setHours(0,0,0,0);
         
         let objData;
-        if (meusDados.proxima_reuniao.includes('/')) {
-          const [d, mes, a] = meusDados.proxima_reuniao.split('/');
+        if (dadosMembro.proxima_reuniao.includes('/')) {
+          const [d, mes, a] = dadosMembro.proxima_reuniao.split('/');
           objData = new Date(`${a}-${mes}-${d}T00:00:00`);
         } else {
-          objData = new Date(meusDados.proxima_reuniao + 'T00:00:00');
+          objData = new Date(dadosMembro.proxima_reuniao + 'T00:00:00');
         }
 
-        setDataReuniao(meusDados.proxima_reuniao.includes('-') ? meusDados.proxima_reuniao.split('-').reverse().join('/') : meusDados.proxima_reuniao);
+        setDataReuniao(dadosMembro.proxima_reuniao.includes('-') ? dadosMembro.proxima_reuniao.split('-').reverse().join('/') : dadosMembro.proxima_reuniao);
         setStatusReuniao(objData < hoje ? 'atrasada' : 'em_dia');
       } else {
         setDataReuniao('Não Agendada');
@@ -57,15 +106,79 @@ export default function HomeLiderado() {
       const pendentes = todasAtas.filter(a => a.idLiderado.toString() === user.id.toString() && a.feedbackPendente === true);
       setAtasPendentes(pendentes);
 
-      const pdisTotais = lerLGPD('@clearit-pdi') || [];
-      const pdisDeletados = lerLGPD('@clearit-deleted-pdi') || [];
-      const pdisAtivos = pdisTotais.filter(p => p.idLiderado.toString() === user.id.toString() && !pdisDeletados.includes(p.id));
-      setMeusPdis(pdisAtivos.length);
+      if (dadosMembro) {
+        const pdisTotais = lerLGPD('@clearit-pdi') || [];
+        const pdisDeletados = lerLGPD('@clearit-deleted-pdi') || [];
+        
+        // PDI Base do Liderado
+        const progresso = dadosMembro.progresso || { tecnico: 50, engajamento: 50, metas: 50 };
+        const proxNivel = dadosMembro.senioridade === 'Júnior' ? 'Pleno' : dadosMembro.senioridade === 'Pleno' ? 'Sênior' : 'Especialista / Liderança';
+        const pdiInfo = {
+          objetivo: `Evolução para nível ${proxNivel}`,
+          foco: `Desenvolvimento de autonomia técnica e visão estratégica do produto.`,
+          competencias: [
+            { nome: 'Hard Skills (Técnico)', nivel: progresso.tecnico },
+            { nome: 'Soft Skills (Liderança)', nivel: progresso.engajamento },
+            { nome: 'Processos e Metas', nivel: progresso.metas }
+          ],
+          planoAcao: [
+            { id: `estatico_pdi_1_${dadosMembro.id}`, acao: 'Certificação Técnica Relevante', prazo: 'Q3 2026', status: 'Em andamento' },
+            { id: `estatico_pdi_2_${dadosMembro.id}`, acao: 'Mentoria com Tech Lead', prazo: 'Mensal', status: 'No prazo' },
+          ]
+        };
 
-      const tarefasTotais = lerLGPD('@clearit-tasks') || [];
-      const tarefasDeletadas = lerLGPD('@clearit-deleted-tasks') || [];
-      const tarefasAtivas = tarefasTotais.filter(t => t.idLiderado.toString() === user.id.toString() && !tarefasDeletadas.includes(t.id) && t.status !== 'Concluído');
-      setMinhasTarefas(tarefasAtivas.length);
+        const pdiSalvosDoMembro = pdisTotais.filter(p => p.idLiderado === dadosMembro.id.toString());
+        const savedPdiMap = new Map(pdiSalvosDoMembro.map(p => [p.id, p]));
+
+        let pdiCombinados = [
+          ...pdiInfo.planoAcao.map(p => savedPdiMap.has(p.id) ? savedPdiMap.get(p.id) : p),
+          ...pdiSalvosDoMembro.filter(p => !pdiInfo.planoAcao.find(bp => bp.id === p.id))
+        ];
+        const pdisAtivos = pdiCombinados.filter(p => !pdisDeletados.includes(p.id));
+
+        const tarefasTotais = lerLGPD('@clearit-tasks') || [];
+        const tarefasDeletadas = lerLGPD('@clearit-deleted-tasks') || [];
+        
+        const tasksBase = dadosMembro.tarefas || [];
+        const tasksSalvasDoMembro = tarefasTotais.filter(t => t.idLiderado === dadosMembro.id.toString());
+        const savedTasksMap = new Map(tasksSalvasDoMembro.map(t => [t.id, t]));
+        
+        const tasksCombinadas = [
+          ...tasksBase.map(t => savedTasksMap.has(t.id) ? savedTasksMap.get(t.id) : t),
+          ...tasksSalvasDoMembro.filter(t => !tasksBase.find(bt => bt.id === t.id))
+        ];
+        const tasksAtivas = tasksCombinadas.filter(t => !tarefasDeletadas.includes(t.id));
+
+        // Expiração automática de PDIs
+        const hojeTs = Date.now();
+        const pdisComExpiracao = pdisAtivos.map(p => {
+          if (p.dataExpiracaoTs && p.dataExpiracaoTs < hojeTs && p.status !== 'Concluído') {
+            return { ...p, status: 'Expirado' }; 
+          }
+          return p;
+        });
+
+        // Competências dinâmicas baseadas na entrega de PDI/Tasks
+        const tarefasFeitas = tasksAtivas.filter(t => t.status.toLowerCase() === 'concluida').length;
+        const pdisFeitos = pdisComExpiracao.filter(p => p.status === 'Concluído').length;
+        const compsDinamicas = pdiInfo.competencias.map(comp => {
+          if (comp.nome.includes('Hard Skills')) return { ...comp, nivel: Math.min(100, comp.nivel + (pdisFeitos * 8)) };
+          if (comp.nome.includes('Processos')) return { ...comp, nivel: Math.min(100, comp.nivel + (tarefasFeitas * 5)) };
+          return comp;
+        });
+
+        setDetalhePdi({
+          objetivo: pdiInfo.objetivo,
+          foco: pdiInfo.foco,
+          competencias: compsDinamicas
+        });
+
+        setListaPdis(pdisComExpiracao);
+        setListaTarefas(tasksAtivas);
+
+        setMeusPdis(pdisComExpiracao.filter(p => p.status !== 'Concluído').length);
+        setMinhasTarefas(tasksAtivas.filter(t => t.status.toLowerCase() !== 'concluida').length);
+      }
     };
 
     carregarDados();
@@ -134,6 +247,50 @@ export default function HomeLiderado() {
       idLiderado: user.id,
       feedbackPendente: true
     }]);
+  };
+
+  const simularDisparoAlertaTeams = async () => {
+    try {
+      await fetch('http://localhost:8000/api/disparar-alerta-teams', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          liderado_nome: user.nome,
+          lider_nome: "DANIEL NASCIMENTO",
+          data_reuniao: dataReuniao || "Em 3 dias"
+        })
+      });
+      alert('🤖 Alerta de 3 dias com Adaptive Card interativo disparado para o Teams (veja o console do servidor)!');
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  const simularRespostaTeams = async () => {
+    try {
+      const sentimentoMock = "🚀 Motivado e Energizado";
+      const pautaMock = "Alinhamento de carreira e transição de squad (Enviado direto do Teams)";
+      
+      const response = await fetch('http://localhost:8000/api/receber-resposta-teams', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          liderado_nome: user.nome,
+          sentimento: sentimentoMock,
+          pauta_liderado: pautaMock
+        })
+      });
+      if (response.ok) {
+        setMeuMomento(sentimentoMock);
+        setPautaPrevia(pautaMock);
+        localStorage.setItem(`@clearit-momento-${user.id}`, sentimentoMock);
+        localStorage.setItem(`@clearit-pauta-previa-${user.id}`, pautaMock);
+        window.dispatchEvent(new Event('clearit-data-updated'));
+        alert('✅ Resposta enviada do Teams integrada localmente! Veja a sincronia de momento atualizada na tela.');
+      }
+    } catch (e) {
+      console.log(e);
+    }
   };
 
   return (
@@ -272,6 +429,33 @@ export default function HomeLiderado() {
               <option value="Precisando de ajuda/bloqueado">🚧 Precisando de ajuda/bloqueado</option>
               <option value="Sobrecarga/Cansado">🔋 Sobrecarga / Cansado</option>
             </select>
+
+            {/* Tema da 1:1 */}
+            <div className="mt-4">
+              <label className="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-2">
+                Tema / Pauta sugerida para a 1:1
+              </label>
+              <textarea 
+                value={pautaPrevia}
+                onChange={handleSalvarPautaPrevia}
+                rows="2"
+                placeholder="O que você quer garantir que a gente aborde hoje? Ex: Alinhamento de PDI..."
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm outline-none text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all resize-none"
+              />
+            </div>
+
+            {/* Botão de Envio/Notificação Teams */}
+            <button
+              onClick={notificarPautaNoTeams}
+              disabled={enviandoTeams}
+              className={`mt-4 w-full py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 border transition-all ${
+                teamsEnviado 
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-950/20 dark:border-emerald-800' 
+                  : 'bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-700 dark:hover:bg-slate-600 shadow-md flex items-center justify-center transition-transform active:scale-95'
+              }`}
+            >
+              {enviandoTeams ? 'Notificando Teams...' : teamsEnviado ? '✅ Resumo Enviado para o Teams!' : '🚀 Confirmar Pauta e Receber Resumo no Teams'}
+            </button>
           </div>
           
           {meuMomento && (
@@ -314,8 +498,125 @@ export default function HomeLiderado() {
 
       </div>
 
+      {/* SEÇÃO DETALHADA DE PDI E TAREFAS (ALINHAMENTO COM A JORNADA) */}
+      {meusDados && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-[fadeIn_0.5s_ease-out] mt-6">
+          
+          {/* COLUNA ESQUERDA: PDI E COMPETÊNCIAS */}
+          <div className="space-y-6">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <Target className="w-5 h-5 text-blue-500" />
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Meu Plano de Desenvolvimento (PDI)</h2>
+              </div>
+
+              {/* Card de Foco */}
+              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-5 text-white shadow-md mb-6">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-blue-100">Objetivo de Carreira</h3>
+                <h4 className="text-xl font-black mt-1">{detalhePdi.objetivo}</h4>
+                <p className="text-blue-50 text-xs mt-1.5 leading-relaxed">{detalhePdi.foco}</p>
+              </div>
+
+              {/* Progresso de Competências */}
+              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-4">Radar de Competências</h3>
+              <div className="space-y-4 mb-6">
+                {detalhePdi.competencias.map((comp, index) => (
+                  <div key={index}>
+                    <div className="flex justify-between text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      <span>{comp.nome}</span>
+                      <span>{comp.nivel}%</span>
+                    </div>
+                    <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full transition-all duration-1000 ${comp.nivel > 70 ? 'bg-emerald-500' : comp.nivel > 40 ? 'bg-amber-500' : 'bg-red-500'}`} 
+                        style={{ width: `${comp.nivel}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Passos do PDI */}
+              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3">Plano de Ação</h3>
+              <div className="space-y-3">
+                {listaPdis.map((acao, index) => (
+                  <div key={acao.id} className="flex gap-3 items-start p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center flex-shrink-0 text-xs font-bold">
+                      {index + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className={`text-xs font-bold truncate ${acao.status === 'Concluído' ? 'text-slate-400 line-through' : 'text-slate-800 dark:text-slate-200'}`}>
+                        {acao.acao}
+                      </h4>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[10px] text-slate-500 flex items-center gap-1"><Clock className="w-3 h-3" /> {acao.prazoDisplay || acao.prazo}</span>
+                        <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                          acao.status === 'Em andamento' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400' :
+                          acao.status === 'No prazo' ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400' :
+                          acao.status === 'Concluído' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400' :
+                          'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400'
+                        }`}>{acao.status}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {listaPdis.length === 0 && <p className="text-xs text-slate-500 italic">Nenhum passo definido no PDI.</p>}
+              </div>
+            </div>
+          </div>
+
+          {/* COLUNA DIREITA: ACORDOS E MISSÕES */}
+          <div className="space-y-6">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm h-full">
+              <div className="flex items-center gap-2 mb-4">
+                <ListTodo className="w-5 h-5 text-amber-500" />
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Acordos e Missões (Tasks)</h2>
+              </div>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Acompanhe as metas táticas combinadas com o seu gestor na última 1:1.</p>
+
+              <div className="space-y-3">
+                {listaTarefas.map((task) => (
+                  <div key={task.id} className={`flex items-start gap-3 p-4 rounded-xl border ${
+                    task.status.toLowerCase() === 'concluida' ? 'bg-emerald-50/30 border-emerald-100 dark:bg-emerald-500/5 dark:border-emerald-500/10' :
+                    task.status.toLowerCase() === 'expirada' ? 'bg-red-50/30 border-red-100 dark:bg-red-500/5 dark:border-red-500/10' :
+                    'bg-slate-50 border-slate-100 dark:bg-slate-800/50 dark:border-slate-700/50'
+                  }`}>
+                    <div className="mt-0.5 flex-shrink-0">
+                      {task.status.toLowerCase() === 'concluida' ? (
+                        <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                      ) : task.status.toLowerCase() === 'expirada' ? (
+                        <AlertTriangle className="w-5 h-5 text-red-500" />
+                      ) : (
+                        <Clock className="w-5 h-5 text-blue-500" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-bold ${task.status.toLowerCase() === 'concluida' ? 'text-slate-400 line-through' : 'text-slate-800 dark:text-slate-200'}`}>
+                        {task.nome || task.descricao}
+                      </p>
+                      {task.nome && task.descricao && (
+                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">{task.descricao}</p>
+                      )}
+                      <p className="text-[10px] text-slate-500 mt-2 font-semibold">Prazo (DDL): {task.ddl ? task.ddl.split('-').reverse().join('/') : 'Sem prazo'}</p>
+                    </div>
+                    <span className={`text-[9px] font-bold uppercase px-2 py-1 rounded-md self-start ${
+                      task.status.toLowerCase() === 'concluida' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20' :
+                      task.status.toLowerCase() === 'pendente' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20' : 'bg-red-100 text-red-700 dark:bg-red-500/20'
+                    }`}>{task.status}</span>
+                  </div>
+                ))}
+                {listaTarefas.length === 0 && (
+                  <p className="text-xs text-slate-500 italic">Nenhum acordo registrado pelo gestor.</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+        </div>
+      )}
+
       {/* BOTÃO MOCK PARA APRESENTAÇÃO */}
-      <div className="text-center mt-12">
+      <div className="text-center mt-12 flex flex-col items-center gap-2">
         <button 
           onClick={forcarAtaMock}
           className="text-xs text-slate-300 dark:text-slate-700 hover:text-amber-500 transition-colors"
@@ -323,6 +624,22 @@ export default function HomeLiderado() {
         >
           [Demo Hack: Forçar Ata Pendente]
         </button>
+        <div className="flex gap-4 mt-2">
+          <button 
+            onClick={simularDisparoAlertaTeams}
+            className="text-xs text-slate-300 dark:text-slate-700 hover:text-blue-500 transition-colors"
+            title="Simula o robô disparando um formulário no Teams 3 dias antes da reunião"
+          >
+            [Demo Hack: Disparo Teams (3 Dias Antes)]
+          </button>
+          <button 
+            onClick={simularRespostaTeams}
+            className="text-xs text-slate-300 dark:text-slate-700 hover:text-emerald-500 transition-colors"
+            title="Simula o colaborador respondendo e enviando a pauta de dentro do Teams"
+          >
+            [Demo Hack: Resposta Direto do Teams]
+          </button>
+        </div>
       </div>
 
     </div>
