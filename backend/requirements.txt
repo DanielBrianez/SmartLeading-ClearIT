@@ -2,4 +2,8 @@ fastapi
 uvicorn
 python-dotenv
 google-generativeai
+# ─── Banco de Dados PostgreSQL ───────────────────────────────────────────────
+# psycopg2-binary: driver que permite o Python falar com o PostgreSQL (Supabase)
+# A versão "-binary" já vem compilada — não precisa instalar nada extra no sistema
+psycopg2-binary
 pydantic
