@@ -24,8 +24,8 @@ Antes do rito da 1:1 ou Feedback, a aplicação deve disponibilizar ao líder um
 
 ---
 
-### B. Feature de Envio Prévio de Pauta (2 dias antes)
-- **Requisito:** A pergunta da pauta do liderado (*"O que você quer garantir que a gente aborde hoje?"*) deve ser enviada de forma automatizada ao colaborador com **2 dias de antecedência**.
+### B. Feature de Envio Prévio de Pauta (3 dias antes)
+- **Requisito:** A pergunta da pauta do liderado (*"O que você quer garantir que a gente aborde hoje?"*) deve ser enviada de forma automatizada ao colaborador com **3 dias de antecedência**.
 - **UX:** As respostas do colaborador devem ser consolidadas e aparecer dinamicamente no painel do líder no momento da reunião.
 
 ---
@@ -147,4 +147,4 @@ Representação estruturada do PDI corporativo contendo as janelas de entregáve
 > **Tag de Compartilhamento de Temas:** A biblioteca de temas compartilhados deve agrupar apenas líderes da **mesma área** (Ex: Desenvolvimento, QA, Infraestrutura). Compartilhar temas de forma global pode poluir a lista com problemas não relacionados (Ex: Líder de Suporte visualizando temas de DevOps).
 
 > [!CAUTION]
-> **Pauta Preenchida sem Notificação:** O envio da pauta ao colaborador com 2 dias de antecedência deve ter um mecanismo de fallback (ex: copiar texto/link rápido) caso o Streamlit não possua servidores de e-mail integrados no ambiente local do MVP.
+> **Pauta Preenchida sem Notificação:** O envio da pauta ao colaborador com 3 dias de antecedência deve ter um mecanismo de fallback (ex: copiar texto/link rápido) caso o Streamlit não possua servidores de e-mail integrados no ambiente local do MVP.

@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { 
   Bot, Send, FileText, Download, Loader2, 
-  User, CheckCircle2, AlertCircle, Briefcase, TrendingUp, Lock, ShieldCheck, EyeOff
+  User, CheckCircle2, AlertCircle, Briefcase, TrendingUp, Lock, ShieldCheck, EyeOff, MessageSquare
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import html2pdf from 'html2pdf.js';
@@ -49,6 +49,12 @@ export default function Meus1a1({ setAbaAtiva }) {
     const liderado = obterSelecaoInicial();
     return liderado ? buscarMomentoDoLiderado(liderado) : '';
   }); 
+  const [pautaPrevia, setPautaPrevia] = useState(() => {
+    const liderado = obterSelecaoInicial();
+    return liderado ? (localStorage.getItem(`@clearit-pauta-previa-${liderado.id}`) || '') : '';
+  });
+  const [ataEditada, setAtaEditada] = useState('');
+  const [modoEdicaoAta, setModoEdicaoAta] = useState(false);
   const [entregas, setEntregas] = useState('');
   
   const [loading, setLoading] = useState(false);
@@ -66,6 +72,7 @@ export default function Meus1a1({ setAbaAtiva }) {
     const atualizarDados = () => {
       const lideradoAtual = obterSelecaoInicial();
       setPerfilLiderado(lideradoAtual ? buscarMomentoDoLiderado(lideradoAtual) : '');
+      setPautaPrevia(lideradoAtual ? (localStorage.getItem(`@clearit-pauta-previa-${lideradoAtual.id}`) || '') : '');
     };
 
     atualizarPerfil();
@@ -90,6 +97,7 @@ export default function Meus1a1({ setAbaAtiva }) {
       setSenioridade('');
       setTempoCasa('');
       setPerfilLiderado('');
+      setPautaPrevia('');
       return;
     }
     const liderado = meuSquad.find(m => m.id.toString() === id);
@@ -97,6 +105,7 @@ export default function Meus1a1({ setAbaAtiva }) {
     setSenioridade(liderado.senioridade);
     setTempoCasa(liderado.tempoCasa);
     setPerfilLiderado(buscarMomentoDoLiderado(liderado)); 
+    setPautaPrevia(localStorage.getItem(`@clearit-pauta-previa-${liderado.id}`) || '');
   };
 
   // 🔥 O ESCUDO DE PRIVACIDADE (SEMANTIC FIREWALL LGPD) 🔥
@@ -158,10 +167,14 @@ export default function Meus1a1({ setAbaAtiva }) {
       const resumoTasks = formatarLista(tasksDoMembro, 'Acordo');
 
       const momentoParaIA = perfilLiderado === 'Aguardando preenchimento...' ? 'Focado nas entregas' : perfilLiderado;
+      const pautaDoColaborador = localStorage.getItem(`@clearit-pauta-previa-${idStr}`) || 'Nenhum tema específico proposto.';
 
       const historicoOculto = `
 [INFORMAÇÃO DE SISTEMA PARA A IA - CONTEXTO OBRIGATÓRIO DA MENTORIA]:
-Abaixo está o histórico real do liderado extraído do banco de dados. Use essas informações para personalizar a pauta:
+Abaixo está o histórico real do liderado extraído do banco de dados e a pauta proposta por ele. Use essas informações para personalizar a pauta:
+
+>> Tema/Pauta proposta pelo Colaborador:
+"${pautaDoColaborador}"
 
 >> Histórico de PDIs:
 ${resumoPdis}
@@ -190,6 +203,12 @@ ${textoLimpo}
       
       const data = await response.json();
       setResultado(data.roteiro);
+
+      const partes = data.roteiro.split(/--- ATA OFICIAL ---|- ATA OFICIAL -|ATA OFICIAL/);
+      const ataTexto = partes.length > 1 ? partes[1].trim() : data.roteiro;
+      setAtaEditada(ataTexto);
+      setModoEdicaoAta(false);
+
       setAbaDocumento('roteiro'); 
     } catch (err) {
       setErro(err.message || 'Erro inesperado ao gerar roteiro.');
@@ -201,86 +220,88 @@ ${textoLimpo}
   const handleDownloadPDF = async () => {
     if (!lideradoSelecionado) return mostrarToast("Erro de segurança: Liderado não identificado.");
 
-    const elemento = document.getElementById('conteudo-ata');
-    const opt = {
-      margin: 15,
-      filename: `Ata_1a1_${lideradoSelecionado.nome.replace(' ', '_')}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
+    setModoEdicaoAta(false);
 
-    html2pdf().set(opt).from(elemento).save();
-    
-    // DISPARA A NOTIFICAÇÃO DE FEEDBACK PENDENTE
-    const novaNotificacao = {
-      id: Date.now(),
-      target: 'LIDER',
-      titulo: 'Aguardando Feedback ⏳',
-      mensagem: `Ata de ${lideradoSelecionado.nome} gerada! O XP será liberado após a avaliação dele.`,
-      tempo: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-      lida: false
-    };
-    const notsSalvas = lerLGPD('@clearit-notificacoes') || [];
-    notsSalvas.unshift(novaNotificacao);
-    salvarLGPD('@clearit-notificacoes', notsSalvas);
-    window.dispatchEvent(new Event('notificacao-atualizada'));
+    setTimeout(async () => {
+      const elemento = document.getElementById('conteudo-ata');
+      if (!elemento) return;
 
-    // SALVA A ATA NO HISTÓRICO COM A FLAG DE FEEDBACK PENDENTE
-    const partesTexto = resultado.split(/--- ATA OFICIAL ---|- ATA OFICIAL -|ATA OFICIAL/);
-    const ataParaRH = partesTexto.length > 1 ? partesTexto[1].trim() : resultado;
-
-    const atasSalvas = lerLGPD('@clearit-atas-squad') || [];
-    atasSalvas.unshift({
-      idAta: Date.now(),
-      idLiderado: lideradoSelecionado.id.toString(),
-      nomeLiderado: lideradoSelecionado.nome,
-      cargo: lideradoSelecionado.cargo,
-      senioridade: senioridade,
-      tempoCasa: tempoCasa,
-      data: new Date().toLocaleDateString('pt-BR'), 
-      conteudoRH: ataParaRH,
-      idLider: idLiderLogado,
-      feedbackPendente: true
-    }); 
-    salvarLGPD('@clearit-atas-squad', atasSalvas);
-
-    // RESETAR O ALARME DE CADÊNCIA (+15 DIAS)
-    let squads = lerLGPD('@clearit-squad') || [];
-    if (squads.length === 0) squads = DB_SQUADS[idLiderLogado] || [];
-    
-    const indexMembro = squads.findIndex(m => m.id.toString() === lideradoSelecionado.id.toString());
-    
-    if (indexMembro !== -1) {
-      const hoje = new Date();
-      const proxima = new Date(hoje);
-      proxima.setDate(hoje.getDate() + 15);
-
-      const formatarData = (data) => {
-        const ano = data.getFullYear();
-        const mes = String(data.getMonth() + 1).padStart(2, '0');
-        const dia = String(data.getDate()).padStart(2, '0');
-        return `${ano}-${mes}-${dia}`;
+      const opt = {
+        margin: 15,
+        filename: `Ata_1a1_${lideradoSelecionado.nome.replace(' ', '_')}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
 
-      squads[indexMembro].ultimaReuniao = formatarData(hoje);
-      squads[indexMembro].proxima_reuniao = formatarData(proxima);
-      salvarLGPD('@clearit-squad', squads);
-    }
+      html2pdf().set(opt).from(elemento).save();
+      
+      // DISPARA A NOTIFICAÇÃO DE FEEDBACK PENDENTE
+      const novaNotificacao = {
+        id: Date.now(),
+        target: 'LIDER',
+        titulo: 'Aguardando Feedback ⏳',
+        mensagem: `Ata de ${lideradoSelecionado.nome} gerada! O XP será liberado após a avaliação dele.`,
+        tempo: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        lida: false
+      };
+      const notsSalvas = lerLGPD('@clearit-notificacoes') || [];
+      notsSalvas.unshift(novaNotificacao);
+      salvarLGPD('@clearit-notificacoes', notsSalvas);
+      window.dispatchEvent(new Event('notificacao-atualizada'));
 
-    mostrarToast('✅ Ata baixada! Aguardando o Liderado avaliar a reunião.');
+      const atasSalvas = lerLGPD('@clearit-atas-squad') || [];
+      atasSalvas.unshift({
+        idAta: Date.now(),
+        idLiderado: lideradoSelecionado.id.toString(),
+        nomeLiderado: lideradoSelecionado.nome,
+        cargo: lideradoSelecionado.cargo,
+        senioridade: senioridade,
+        tempoCasa: tempoCasa,
+        data: new Date().toLocaleDateString('pt-BR'), 
+        conteudoRH: ataEditada,
+        idLider: idLiderLogado,
+        feedbackPendente: true
+      }); 
+      salvarLGPD('@clearit-atas-squad', atasSalvas);
 
-    setTimeout(() => { if (setAbaAtiva) setAbaAtiva('Home'); }, 2000);
+      // RESETAR O ALARME DE CADÊNCIA (+15 DIAS)
+      let squads = lerLGPD('@clearit-squad') || [];
+      if (squads.length === 0) squads = DB_SQUADS[idLiderLogado] || [];
+      
+      const indexMembro = squads.findIndex(m => m.id.toString() === lideradoSelecionado.id.toString());
+      
+      if (indexMembro !== -1) {
+        const hoje = new Date();
+        const proxima = new Date(hoje);
+        proxima.setDate(hoje.getDate() + 15);
 
-    try {
-      await fetch('http://localhost:8000/api/registrar-download', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lider: nomeLiderLogado, senioridade: senioridade, perfil_comportamental: perfilLiderado })
-      });
-    } catch (e) {
-      console.log('Aviso: Log de auditoria falhou, mas PDF gerado.', e);
-    }
+        const formatarData = (data) => {
+          const ano = data.getFullYear();
+          const mes = String(data.getMonth() + 1).padStart(2, '0');
+          const dia = String(data.getDate()).padStart(2, '0');
+          return `${ano}-${mes}-${dia}`;
+        };
+
+        squads[indexMembro].ultimaReuniao = formatarData(hoje);
+        squads[indexMembro].proxima_reuniao = formatarData(proxima);
+        salvarLGPD('@clearit-squad', squads);
+      }
+
+      mostrarToast('✅ Ata baixada! Aguardando o Liderado avaliar a reunião.');
+
+      setTimeout(() => { if (setAbaAtiva) setAbaAtiva('Home'); }, 2000);
+
+      try {
+        await fetch('http://localhost:8000/api/registrar-download', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lider: nomeLiderLogado, senioridade: senioridade, perfil_comportamental: perfilLiderado })
+        });
+      } catch (e) {
+        console.log('Aviso: Log de auditoria falhou, mas PDF gerado.', e);
+      }
+    }, 100);
   };
 
   const partesTexto = resultado.split(/--- ATA OFICIAL ---|- ATA OFICIAL -|ATA OFICIAL/);
@@ -374,6 +395,17 @@ ${textoLimpo}
               </div>
             </div>
 
+            {pautaPrevia && (
+              <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 p-4 rounded-xl">
+                <p className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-500 mb-1 flex items-center gap-1.5">
+                  <MessageSquare className="w-3.5 h-3.5" /> Pauta Proposta pelo Colaborador
+                </p>
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 italic">
+                  "{pautaPrevia}"
+                </p>
+              </div>
+            )}
+
             <div>
               <label className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-1 mt-1 flex justify-between">
                 Foco / Entregas Recentes
@@ -451,49 +483,71 @@ ${textoLimpo}
             <div className={`${abaDocumento === 'ata' && resultado ? 'block animate-[fadeIn_0.3s]' : 'hidden'}`}>
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-slate-900 dark:text-white font-bold">Documento Pronto para Assinatura</h3>
-                <button onClick={handleDownloadPDF} className="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold shadow-sm transition-all">
-                  <Download className="w-4 h-4" /> Gerar PDF e Aguardar Avaliação
-                </button>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setModoEdicaoAta(!modoEdicaoAta)} 
+                    className="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 text-slate-700 dark:text-slate-300 px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-all"
+                  >
+                    {modoEdicaoAta ? "👁️ Ver Visualização" : "✍️ Ajustar Ata Manualmente"}
+                  </button>
+                  <button onClick={handleDownloadPDF} className="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-all">
+                    <Download className="w-4 h-4" /> Gerar PDF e Aguardar Avaliação
+                  </button>
+                </div>
               </div>
 
-              <div id="conteudo-ata" className="bg-white text-slate-900 p-6 md:p-8 rounded-xl border border-slate-200 shadow-sm">
-                <div className="mb-8 border-b-2 border-slate-200 pb-6">
-                  <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-4">Ata Oficial de Alinhamento 1:1</h2>
-                  <div className="grid grid-cols-2 gap-y-4 gap-x-8 text-sm">
+              {modoEdicaoAta ? (
+                <div className="mb-6 animate-[fadeIn_0.2s]">
+                  <label className="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-2">
+                    Edite o conteúdo da Ata Oficial (suporta formatação Markdown):
+                  </label>
+                  <textarea
+                    value={ataEditada}
+                    onChange={(e) => setAtaEditada(e.target.value)}
+                    rows="15"
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-4 text-sm font-mono outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white"
+                  />
+                </div>
+              ) : (
+                <div id="conteudo-ata" className="bg-white text-slate-900 p-6 md:p-8 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="mb-8 border-b-2 border-slate-200 pb-6">
+                    <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-4">Ata Oficial de Alinhamento 1:1</h2>
+                    <div className="grid grid-cols-2 gap-y-4 gap-x-8 text-sm">
+                      <div>
+                        <span className="text-slate-500 text-xs font-bold uppercase block mb-1">Líder Conduzindo</span>
+                        <span className="font-semibold text-slate-900">{nomeLiderLogado}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 text-xs font-bold uppercase block mb-1">Colaborador</span>
+                        <span className="font-semibold text-slate-900">{lideradoSelecionado?.nome}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 text-xs font-bold uppercase block mb-1">Cargo e Nível</span>
+                        <span className="font-semibold text-slate-900">{lideradoSelecionado?.cargo} ({senioridade})</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 text-xs font-bold uppercase block mb-1">Tempo de Empresa</span>
+                        <span className="font-semibold text-slate-900">{tempoCasa}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="prose prose-sm max-w-none prose-slate text-slate-800">
+                    <ReactMarkdown>{ataEditada}</ReactMarkdown>
+                  </div>
+                  
+                  <div className="mt-16 pt-8 grid grid-cols-2 gap-8 text-center">
                     <div>
-                      <span className="text-slate-500 text-xs font-bold uppercase block mb-1">Líder Conduzindo</span>
-                      <span className="font-semibold text-slate-900">{nomeLiderLogado}</span>
+                      <div className="border-b border-slate-400 w-3/4 mx-auto mb-2"></div>
+                      <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Assinatura do Líder</p>
                     </div>
                     <div>
-                      <span className="text-slate-500 text-xs font-bold uppercase block mb-1">Colaborador</span>
-                      <span className="font-semibold text-slate-900">{lideradoSelecionado?.nome}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-500 text-xs font-bold uppercase block mb-1">Cargo e Nível</span>
-                      <span className="font-semibold text-slate-900">{lideradoSelecionado?.cargo} ({senioridade})</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-500 text-xs font-bold uppercase block mb-1">Tempo de Empresa</span>
-                      <span className="font-semibold text-slate-900">{tempoCasa}</span>
+                      <div className="border-b border-slate-400 w-3/4 mx-auto mb-2"></div>
+                      <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Assinatura do Liderado</p>
                     </div>
                   </div>
                 </div>
-                
-                <div className="prose prose-sm max-w-none prose-slate text-slate-800">
-                  <ReactMarkdown>{ataParaRH}</ReactMarkdown>
-                </div>
-                
-                <div className="mt-16 pt-8 grid grid-cols-2 gap-8 text-center">
-                  <div>
-                    <div className="border-b border-slate-400 w-3/4 mx-auto mb-2"></div>
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Assinatura do Líder</p>
-                  </div>
-                  <div>
-                    <div className="border-b border-slate-400 w-3/4 mx-auto mb-2"></div>
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Assinatura do Liderado</p>
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
 
           </div>

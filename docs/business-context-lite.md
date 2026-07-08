@@ -68,7 +68,7 @@ A plataforma automatiza a carga cognitiva de planejamento, customiza as abordage
 | F-12 | [Descontinuada] | - | Feature de Biblioteca Colaborativa de Temas descontinuada devido à redundância com o Heatmap Temático por IA. |
 | F-13 | Compliance Guardrails & Privacy Shield (AI Gateway) | Pronto para Dev | Tokenização local (CPF/RG) e AI Gateway Proxy intermediário para higienização semântica (doenças/subjetividades). |
 | F-14 | Fluxo de Assinatura Bilateral (Sign-off) | Pronto para Dev | Envio automático da ata e painel do liderado para confirmação digital de acordos |
-| F-15 | Termômetro de Segurança Psicológica | Pronto para Dev | Envio de escala de humor no Teams 2 dias antes e ajuste dinâmico do prompt do roteiro da IA |
+| F-15 | Termômetro de Segurança Psicológica | Pronto para Dev | Envio de escala de humor no Teams 3 dias antes e ajuste dinâmico do prompt do roteiro da IA |
 | F-16 | Painel do Liderado & Trilha de Levels | Pronto para Dev | Espaço centralizado para o colaborador ver conquistas, progresso do PDI, acordos e trilha de levels |
 | F-17 | Módulo de Alerta de Risco de Colaborador (Opt-In) | Pronto para Dev | Checkbox na ata para reportar risco ao RH. Segregação nominal local e classificação semântica de risco/severidade via IA anônima. |
 | F-18 | Omnicanalidade e Micro-Interfaces (Omnichannel & Headless UI) | Pronto para Dev | Permite interações do usuário diretamente em canais onde já trabalha (Slack, Teams, E-mail). |
@@ -181,7 +181,7 @@ A plataforma automatiza a carga cognitiva de planejamento, customiza as abordage
     - Sinaliza prazos de cadências (quinzenal, mensal, experiência de 45/90 dias e trimestral).
 
 ### Feature F-09: Integração com MS Teams & E-mail (Story 9)
-*   **User Story:** Como liderado, quero receber um convite automático no MS Teams ou e-mail 2 dias antes da minha 1:1 para preencher minha pauta, enviando notificação ao meu líder.
+*   **User Story:** Como liderado, quero receber um convite automático no MS Teams ou e-mail 3 dias antes da minha 1:1 para preencher minha pauta, enviando notificação ao meu líder.
 *   **Critérios de Aceite:**
     - Disparo de Adaptive Cards no Teams com campos de temas e comentários.
     - Respostas persistidas localmente e integradas ao painel de preparação do gestor.
@@ -218,7 +218,7 @@ A plataforma automatiza a carga cognitiva de planejamento, customiza as abordage
 ### Feature F-15: Termômetro de Segurança Psicológica Pré-Reunião (Story 15)
 *   **User Story:** Como líder, quero saber o estado emocional/energia do meu liderado antes da 1:1 para calibrar minha abordagem e conduzir a reunião de forma empática.
 *   **Critérios de Aceite:**
-    - Coleta de humor/energia por escala de emojis 2 dias antes no Teams/e-mail.
+    - Coleta de humor/energia por escala de emojis 3 dias antes no Teams/e-mail.
     - Exibe nuggets informativos no painel do líder e ajusta o prompt da IA se o liderado indicar sobrecarga/estresse.
 
 ### Feature F-16: Painel do Liderado & Trilha de Habilidades (Story 16)
