@@ -22,7 +22,9 @@
 
 - [ ] A geração de roteiro exibe mensagem de sucesso ou erro clara
   > ✅ Parcial: Funcionou conforme esperado, o roteiro aparece na tela após "A IA está analisando o perfil..." (entendo que serve como confirmação visual).
+  >
   > ❌ Erro: quando a API falha de verdade, a tela fica travada em "Roteiro em processamento..." indefinidamente, sem avisar o usuário que algo deu errado. (Causa raiz que testei: chave da API mal configurada, já corrigida — mas o problema de não mostrar erro nenhum continua existindo pra qualquer falha futura.)
+  >
   > ⚠️ Bug relacionado: a aba "Ata Oficial" deixa gerar o PDF mesmo quando o roteiro não foi gerado direito — deveria avisar ou bloquear.
 
 - [x] O conteúdo gerado é legível e estruturado
@@ -34,6 +36,7 @@
 
 - [x] Inclusão de tarefa/PDI funciona sem duplicação
   > ✅ Sucesso: É possível adicionar novas tasks em Meu Squad -> Ver Perfil Completo -> Visão e Acordos. É possível adicionar PDI em Meu Squad -> Ver Perfil -> Plano de Desenvolvimento (PDI).
+  >
   > ❌ Bug adicional (fora deste requisito, mas relacionado): Em Meu Squad -> Ver Perfil Completo, existem dois botões: "Criar Metas SMART" e "Gerar Pauta 1:1". Ao clicar em ambos, a página retorna para "Meu Squad", mas não há nenhuma funcionalidade específica através desses botões.
 
 - [x] Edição e exclusão de itens preservam consistência visual
@@ -45,10 +48,12 @@
 
 - [x] Busca e filtros funcionam corretamente
   > ✅ Sucesso: filtros funcionam normalmente.
+  >
   > ⚠️ Obs: Em relação à busca no sentido de digitar algo, isso não há. Há apenas a opção de filtro. Para mim, é o suficiente, mas deixei a observação porque esse tópico menciona "busca" além dos filtros.
 
 - [ ] Exportação/visualização de dados é consistente
   > ✅ Visualização: ok, painel exibe métricas e gráficos corretamente.
+  >
   > ❌ Exportação: Há como fazer download/exportar em "Home", porém o PDF gerado após o download aparece de forma ilegível/inconsistente, cortando parte do conteúdo.
 
 ## 5. LGPD e privacidade
@@ -60,6 +65,7 @@
 
 - [ ] Dados salvos no localStorage não expõem informações indevidas
   > ❌ Bug (testado como Líder): abri F12 → Aplicativo → Armazenamento → Armazenamento local → localhost:5173, e vi nome de colaboradores + pontuação de ranking, estado emocional do liderado e conteúdo da pauta de reunião, tudo em texto legível. O resto (squad, PDI) só está codificado (JTVCJTdC...), não criptografado — fácil de reverter.
+  >
   > Severidade: Alta — dado pessoal/sensível exposto no navegador.
 
 ## 6. Qualidade operacional
@@ -67,7 +73,8 @@
   > ✅ Sucesso: Testado via Console do DevTools (F12) navegando pelas telas principais, nenhum erro em vermelho, tudo funcionando normalmente.
 
 - [ ] O build e o lint permanecem estáveis após mudanças
-  > ✅ Build: passou sem erros (npm run build)
+  > ✅ Build: passou sem erros (npm run build).
+  >
   > ❌ Lint: 1 erro encontrado (npm run lint). Arquivo: src/views/Meus1a1.jsx, linha 309. Variável 'ataParaRH' foi criada mas nunca usada no código.
   > Severidade: Baixa, não quebra a aplicação, mas indica possível código incompleto ou esquecido.
 
