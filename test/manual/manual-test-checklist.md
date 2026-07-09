@@ -81,7 +81,7 @@
 - [x] O fluxo funciona em modo offline para dados mockados
   > ✅ Sucesso. Testado desligando o Wi-Fi com o sistema já aberto. Telas com dados mockados (Liga de Ouro, Playbook, Meu Squad, etc.) continuaram funcionando normalmente offline. Geração de roteiro com IA não foi testada offline (depende de internet por natureza, não é bug).
 
-  - [ ] Layout da tela "Liga de Ouro" sem sobreposições visuais
+- [ ] Layout da tela "Liga de Ouro" sem sobreposições visuais
   > ❌ Bug: o ícone (coroa/estrela) sobrepõe parte do texto do 
   título "TOP 3 LIDERANÇAS", prejudicando a leitura.
   >
