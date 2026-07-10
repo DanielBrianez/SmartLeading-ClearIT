@@ -35,7 +35,32 @@ def gerar_roteiro_ia(dados: dict) -> str:
     senioridade = dados.get("senioridade_liderado", "Não especificado")
     tempo_casa = dados.get("tempo_casa", "Não especificado")
     perfil_comportamental = dados.get("perfil_comportamental", "Não especificado")
+    meeting_type = dados.get("meeting_type", None)
     entregas = dados.get("resumo_entregas", "Nenhuma entrega relatada")
+
+    # Instruções específicas por tipo de reunião
+    tipo_instrucao = ""
+    if meeting_type == 'feedback_corretivo':
+        tipo_instrucao = (
+            "\n\nIMPORTANTE: Este é um feedback corretivo. Utilize a Comunicação Não-Violenta e o modelo SBI "
+            "(Situação, Comportamento, Impacto). Forneça frases de exemplo para iniciar a conversa, perguntas para "
+            "escuta ativa e passos de co-construção de solução. Evite rótulos e foque em ações e impactos." 
+        )
+    elif meeting_type == 'reconhecimento':
+        tipo_instrucao = (
+            "\n\nIMPORTANTE: Este é um momento de reconhecimento. Gere mensagens curtas e positivas, exemplos de elogios "
+            "objetivos e sugestões de como compartilhar o reconhecimento (público/privado)."
+        )
+    elif meeting_type == 'desenvolvimento':
+        tipo_instrucao = (
+            "\n\nIMPORTANTE: Esta reunião foca em desenvolvimento de carreira/PDI. Estruture sugestões de objetivos, "
+            "atividades de aprendizagem, critérios de sucesso e uma data de revisão. Inclua perguntas para identificar motivação." 
+        )
+    elif meeting_type == 'mediado_por_dados':
+        tipo_instrucao = (
+            "\n\nIMPORTANTE: Use dados e métricas. Analise indicadores apresentados, proponha análise de causa-raiz e planos de ação "
+            "quantificáveis com responsáveis e prazos. Evite interpretações subjetivas sem números."
+        )
 
     try:
         model = genai.GenerativeModel('gemini-3.1-flash-lite')
@@ -84,6 +109,8 @@ def gerar_roteiro_ia(dados: dict) -> str:
         - Júnior/Trainee: Foco em execução guiada e aprendizado técnico.
         - Pleno: Foco em autonomia, qualidade de entrega e visão de ponta a ponta.
         - Sênior/Especialista: Foco em mentoria, arquitetura, impacto no negócio e liderança técnica.
+        {tipo_instrucao}
+
         """
 
         response = model.generate_content(prompt)

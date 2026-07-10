@@ -13,7 +13,10 @@ app = FastAPI(title="Smart Leading API - Clear IT")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"], 
+    allow_origins=[
+        "http://localhost:5173",  # A porta padrão
+        "http://localhost:5174"   # <--- ADICIONE A PORTA NOVA AQUI!
+    ], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -26,6 +29,7 @@ class RoteiroRequest(BaseModel):
     senioridade_liderado: str
     tempo_casa: str
     perfil_comportamental: str
+    meeting_type: str | None = None
     resumo_entregas: str
 
 class DownloadLogRequest(BaseModel):
@@ -54,10 +58,22 @@ def salvar_linha_log(linha_texto: str):
 @app.post("/api/gerar-roteiro")
 async def gerar_roteiro(dados: RoteiroRequest):
     try:
-        texto_gerado = gerar_roteiro_ia(dados.model_dump())
+        payload = dados.model_dump()
+        texto_gerado = gerar_roteiro_ia(payload)
         return {"roteiro": texto_gerado}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/pauta-templates")
+async def pauta_templates():
+    templates = {
+        "feedback_corretivo": "Modelo SBI:\n- Situação: \n- Comportamento: \n- Impacto: \n\nCo-construção de ações e data de revisão.",
+        "reconhecimento": "Template de Reconhecimento:\n- Comportamento observado: \n- Resultado/Impacto: \n- Como compartilhar (público/privado): \n- Sugestão de próximo passo para manter o comportamento.",
+        "desenvolvimento": "Template PDI / Desenvolvimento:\n- Objetivo de carreira: \n- Habilidades a desenvolver: \n- Ações (treinamentos/mentoria): \n- Critério de sucesso e data de revisão.",
+        "mediado_por_dados": "Template Mediado por Dados:\n- Métrica/Indicador: \n- Valor atual: \n- Meta: \n- Análise de causa-raiz: \n- Ações propostas e responsável."
+    }
+    return templates
 
 @app.post("/api/registrar-download")
 async def registrar_download(dados: DownloadLogRequest):

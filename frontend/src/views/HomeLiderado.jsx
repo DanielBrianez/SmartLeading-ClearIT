@@ -33,6 +33,15 @@ export default function HomeLiderado() {
   const [enviandoTeams, setEnviandoTeams] = useState(false);
   const [teamsEnviado, setTeamsEnviado] = useState(false);
 
+  // Estado para notificações customizadas
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+  // Função para disparar a notificação bonitinha
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3500);
+  };
+
   const handleSalvarPautaPrevia = (e) => {
     const valor = e.target.value;
     setPautaPrevia(valor);
@@ -205,7 +214,8 @@ export default function HomeLiderado() {
     notsSalvas.unshift(novaNotificacao);
     salvarLGPD('@clearit-notificacoes', notsSalvas);
     window.dispatchEvent(new Event('notificacao-atualizada'));
-    alert("Seu líder foi notificado no sistema com sucesso!");
+    
+    showToast("Seu líder foi notificado no sistema com sucesso!", "success");
   };
 
   const enviarFeedback = (ataId, idLider) => {
@@ -260,7 +270,7 @@ export default function HomeLiderado() {
           data_reuniao: dataReuniao || "Em 3 dias"
         })
       });
-      alert('🤖 Alerta de 3 dias com Adaptive Card interativo disparado para o Teams (veja o console do servidor)!');
+      showToast('🤖 Alerta de 3 dias com Adaptive Card disparado para o Teams!', 'info');
     } catch (e) {
       console.log(e);
     }
@@ -286,7 +296,7 @@ export default function HomeLiderado() {
         localStorage.setItem(`@clearit-momento-${user.id}`, sentimentoMock);
         localStorage.setItem(`@clearit-pauta-previa-${user.id}`, pautaMock);
         window.dispatchEvent(new Event('clearit-data-updated'));
-        alert('✅ Resposta enviada do Teams integrada localmente! Veja a sincronia de momento atualizada na tela.');
+        showToast('✅ Resposta enviada do Teams integrada localmente!', 'success');
       }
     } catch (e) {
       console.log(e);
@@ -444,14 +454,16 @@ export default function HomeLiderado() {
               />
             </div>
 
-            {/* Botão de Envio/Notificação Teams */}
+            {/* Botão de Envio/Notificação Teams (COM VALIDAÇÃO DE CAMPO VAZIO) */}
             <button
               onClick={notificarPautaNoTeams}
-              disabled={enviandoTeams}
+              disabled={enviandoTeams || pautaPrevia.trim() === ''}
               className={`mt-4 w-full py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 border transition-all ${
-                teamsEnviado 
+                enviandoTeams || pautaPrevia.trim() === ''
+                  ? 'bg-slate-200 border-slate-200 text-slate-400 dark:bg-slate-800 dark:border-slate-800 dark:text-slate-500 cursor-not-allowed'
+                  : teamsEnviado 
                   ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-950/20 dark:border-emerald-800' 
-                  : 'bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-700 dark:hover:bg-slate-600 shadow-md flex items-center justify-center transition-transform active:scale-95'
+                  : 'bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-700 dark:hover:bg-slate-600 shadow-md transition-transform active:scale-95'
               }`}
             >
               {enviandoTeams ? 'Notificando Teams...' : teamsEnviado ? '✅ Resumo Enviado para o Teams!' : '🚀 Confirmar Pauta e Receber Resumo no Teams'}
@@ -641,6 +653,20 @@ export default function HomeLiderado() {
           </button>
         </div>
       </div>
+
+      {/* COMPONENTE FLUTUANTE DE TOAST (NOTIFICAÇÃO) */}
+      {toast.show && (
+        <div className="fixed bottom-6 right-6 z-50 animate-[fadeIn_0.3s_ease-out]">
+          <div className={`flex items-center gap-3 px-6 py-4 rounded-2xl shadow-xl border ${
+            toast.type === 'info' 
+              ? 'bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300'
+              : 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-900/30 dark:border-emerald-800 dark:text-emerald-300'
+          }`}>
+            {toast.type === 'info' ? <MessageSquare className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
+            <span className="text-sm font-bold">{toast.message}</span>
+          </div>
+        </div>
+      )}
 
     </div>
   );

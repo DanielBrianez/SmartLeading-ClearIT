@@ -53,6 +53,16 @@ export default function Meus1a1({ setAbaAtiva }) {
     const liderado = obterSelecaoInicial();
     return liderado ? (localStorage.getItem(`@clearit-pauta-previa-${liderado.id}`) || '') : '';
   });
+  const [meetingType, setMeetingType] = useState(() => {
+    return localStorage.getItem('@clearit-meeting-type') || 'feedback_corretivo';
+  });
+  const MEETING_OPTIONS = {
+    feedback_corretivo: { label: 'Feedback Corretivo / Construtivo', hint: 'Imediato (até 48h). Use CNV e modelo SBI; foco em ação e impacto.' },
+    reconhecimento: { label: 'Reconhecimento (Positivo)', hint: 'Imediato. Pode ser público ou privado; reforçar comportamentos desejados.' },
+    desenvolvimento: { label: 'Feedback de Carreira / Desenvolvimento', hint: 'Bimensal/Trimestral. Calibrar progresso na trilha e PDI.' },
+    mediado_por_dados: { label: 'Mediado por Dados', hint: 'Periódico (Sprint/OKR). Revisar métricas objetivas e causas-raiz.' }
+  };
+  const [pautaTemplates, setPautaTemplates] = useState(null);
   const [ataEditada, setAtaEditada] = useState('');
   const [modoEdicaoAta, setModoEdicaoAta] = useState(false);
   const [entregas, setEntregas] = useState('');
@@ -195,6 +205,7 @@ ${textoLimpo}
           senioridade_liderado: senioridade,
           tempo_casa: tempoCasa,
           perfil_comportamental: momentoParaIA,
+          meeting_type: meetingType,
           resumo_entregas: historicoOculto
         }),
         signal: controller.signal
@@ -412,6 +423,43 @@ ${textoLimpo}
               </div>
             </div>
 
+            <div className="mb-4">
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo de Reunião</label>
+              <div className="flex gap-2">
+                <select
+                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white transition-all"
+                value={meetingType}
+                onChange={(e) => { setMeetingType(e.target.value); localStorage.setItem('@clearit-meeting-type', e.target.value); }}
+                disabled={loading}
+              >
+                {Object.keys(MEETING_OPTIONS).map(k => (
+                  <option key={k} value={k}>{MEETING_OPTIONS[k].label}</option>
+                ))}
+              </select>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch('http://localhost:8000/api/pauta-templates');
+                      const data = await res.json();
+                      setPautaTemplates(data);
+                      const template = data[meetingType];
+                      if (template) {
+                        setPautaPrevia(template);
+                        mostrarToast('Template inserido na pauta proposta pelo colaborador. Ajuste conforme necessário.');
+                      }
+                    } catch (e) {
+                      mostrarToast('Não foi possível buscar templates. Verifique o backend.', 'alert');
+                    }
+                  }}
+                  className="bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:hover:bg-blue-800/40 px-3 py-2 rounded-xl text-sm font-semibold border border-blue-100 dark:border-blue-800"
+                >Inserir template</button>
+              </div>
+
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">{MEETING_OPTIONS[meetingType].hint}</p>
+            </div>
+
             {pautaPrevia && (
               <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 p-4 rounded-xl">
                 <p className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-500 mb-1 flex items-center gap-1.5">
@@ -433,7 +481,15 @@ ${textoLimpo}
               <textarea 
                 className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm outline-none text-slate-900 dark:text-white resize-none disabled:opacity-50 disabled:cursor-not-allowed transition-all focus:ring-2 focus:ring-blue-500"
                 rows="4"
-                placeholder="Ex: Entregou o projeto X com atraso. Solicitar aumento de R$ 2.000 (O Firewall vai censurar automaticamente)."
+                placeholder={
+                  meetingType === 'feedback_corretivo'
+                    ? 'Use o modelo SBI. Ex: Situação: Ao entregar a tarefa X na sprint Y; Comportamento: entregou sem testes e documentação; Impacto: gerou 5h de retrabalho.'
+                    : meetingType === 'reconhecimento'
+                      ? 'Descreva o comportamento ou entrega que merece reconhecimento e seu impacto positivo.'
+                      : meetingType === 'desenvolvimento'
+                        ? 'Indique pontos de desenvolvimento, objetivos de carreira e possíveis ações do PDI.'
+                        : 'Anexe métricas, números e evidências para o feedback mediado por dados.'
+                }
                 value={entregas}
                 onChange={e => setEntregas(e.target.value)}
                 disabled={loading}
