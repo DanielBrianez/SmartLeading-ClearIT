@@ -43,7 +43,9 @@ export default function Meus1a1({ setAbaAtiva }) {
     const liderado = obterSelecaoInicial();
     return liderado?.tempoCasa || '';
   });
-  const [perfilLider, setPerfilLider] = useState(localStorage.getItem('@clearit-perfil-config') || 'Técnico');
+  
+  // 👇 ATUALIZADO: Agora busca a chave correta salva pelo Chatbot
+  const [perfilLider, setPerfilLider] = useState(localStorage.getItem('@clearit-perfil-lider') || 'Líder Engajado');
   
   const [perfilLiderado, setPerfilLiderado] = useState(() => {
     const liderado = obterSelecaoInicial();
@@ -75,7 +77,8 @@ export default function Meus1a1({ setAbaAtiva }) {
 
   useEffect(() => {
     const atualizarPerfil = () => {
-      const perfilSalvo = localStorage.getItem('@clearit-perfil-config');
+      // 👇 ATUALIZADO: Usando a chave correta do Chatbot
+      const perfilSalvo = localStorage.getItem('@clearit-perfil-lider');
       if (perfilSalvo) setPerfilLider(perfilSalvo);
     };
 
@@ -87,10 +90,8 @@ export default function Meus1a1({ setAbaAtiva }) {
 
     atualizarPerfil();
     atualizarDados();
-    window.addEventListener('perfil-atualizado', atualizarPerfil);
     window.addEventListener('clearit-data-updated', atualizarDados);
     return () => {
-      window.removeEventListener('perfil-atualizado', atualizarPerfil);
       window.removeEventListener('clearit-data-updated', atualizarDados);
     };
   }, []);
@@ -177,8 +178,8 @@ export default function Meus1a1({ setAbaAtiva }) {
       const resumoPdis = formatarLista(pdisDoMembro, 'PDI');
       const resumoTasks = formatarLista(tasksDoMembro, 'Acordo');
 
-      const momentoParaIA = perfilLiderado === 'Aguardando preenchimento...' ? 'Focado nas entregas' : perfilLiderado;
-      const pautaDoColaborador = localStorage.getItem(`@clearit-pauta-previa-${idStr}`) || 'Nenhum tema específico proposto.';
+      const momentoParaIA = perfilLiderado === 'Aguardando preenchimento...' ? 'Não informou o momento atual.' : perfilLiderado;
+      const pautaDoColaborador = localStorage.getItem(`@clearit-pauta-previa-${idStr}`) || 'Nenhuma pauta sugerida.';
 
       const historicoOculto = `
 [INFORMAÇÃO DE SISTEMA PARA A IA - CONTEXTO OBRIGATÓRIO DA MENTORIA]:
@@ -197,6 +198,7 @@ ${resumoTasks}
 ${textoLimpo}
       `;
 
+      // 👇 ATUALIZADO: Payload enviado ao back-end agora inclui os parâmetros novos!
       const response = await fetch('http://localhost:8000/api/gerar-roteiro', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -204,9 +206,13 @@ ${textoLimpo}
           perfil_lideranca: perfilLider,
           senioridade_liderado: senioridade,
           tempo_casa: tempoCasa,
-          perfil_comportamental: momentoParaIA,
           meeting_type: meetingType,
-          resumo_entregas: historicoOculto
+          resumo_entregas: historicoOculto,
+          // Novas variáveis esperadas pela API
+          sentimento_liderado: momentoParaIA,
+          pauta_liderado: pautaDoColaborador,
+          pdis_ativos: pdisDoMembro.length.toString(),
+          tarefas_ativas: tasksDoMembro.length.toString()
         }),
         signal: controller.signal
       });
