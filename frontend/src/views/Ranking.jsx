@@ -144,9 +144,9 @@ export default function Ranking() {
         
         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
           <div>
-            <div className="flex items-center gap-3 mb-2">
-              <Crown className="w-8 h-8 text-amber-400" />
-              <h1 className="text-3xl font-black tracking-tight">Liga de Ouro</h1>
+            <div className="flex flex-wrap items-center gap-3 mb-2">
+              <Crown className="w-8 h-8 text-amber-400 flex-shrink-0" />
+              <h1 className="text-3xl font-black tracking-tight break-words">Liga de Ouro</h1>
             </div>
             <p className="text-slate-300 font-medium max-w-md">
               Os líderes mais engajados no desenvolvimento contínuo de suas equipes.

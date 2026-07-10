@@ -18,7 +18,7 @@ dist-ssr
 # ==========================================
 # 🛑 ARQUIVOS E DIRETÓRIOS DO EDITOR
 # ==========================================
-.vscode/*
+.vscode/
 !.vscode/extensions.json
 .idea
 .DS_Store
@@ -60,6 +60,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
+*.pytest_cache
 
 # ==========================================
 # 🖥️ SISTEMAS OPERACIONAIS

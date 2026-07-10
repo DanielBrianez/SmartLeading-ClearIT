@@ -139,17 +139,18 @@ export default function Meus1a1({ setAbaAtiva }) {
       return;
     }
 
-    // 1. Aplica o Firewall LGPD nas observações do líder
     const textoLimpo = aplicarFiltroLGPD(entregas);
-    
-    // Dispara aviso visual se o Firewall precisou atuar
+
     if (textoLimpo !== entregas) {
       mostrarToast('🛡️ Firewall LGPD Ativado: Dados sensíveis (CPF/Salário) foram anonimizados antes do envio para a IA.', 'shield');
     }
 
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 20000);
+
     try {
       const idStr = lideradoSelecionado.id.toString();
-      
+
       const pdisSalvos = lerLGPD('@clearit-pdi') || [];
       const pdisDeletados = lerLGPD('@clearit-deleted-pdi') || [];
       const pdisDoMembro = pdisSalvos.filter(p => p.idLiderado === idStr && !pdisDeletados.includes(p.id));
@@ -183,10 +184,9 @@ ${resumoPdis}
 ${resumoTasks}
 
 [OBSERVAÇÕES DO LÍDER PARA ESSA REUNIÃO]:
-${textoLimpo} 
+${textoLimpo}
       `;
 
-      // Envia também os dados ocultos da UI (tempoCasa e perfilLider)
       const response = await fetch('http://localhost:8000/api/gerar-roteiro', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -194,14 +194,21 @@ ${textoLimpo}
           perfil_lideranca: perfilLider,
           senioridade_liderado: senioridade,
           tempo_casa: tempoCasa,
-          perfil_comportamental: momentoParaIA, 
+          perfil_comportamental: momentoParaIA,
           resumo_entregas: historicoOculto
-        })
+        }),
+        signal: controller.signal
       });
 
-      if (!response.ok) throw new Error('Erro ao conectar com a inteligência artificial.');
-      
+      if (!response.ok) {
+        throw new Error('A IA não respondeu corretamente. Tente novamente em instantes.');
+      }
+
       const data = await response.json();
+      if (!data?.roteiro || typeof data.roteiro !== 'string' || !data.roteiro.trim()) {
+        throw new Error('A resposta da IA veio vazia. Tente novamente.');
+      }
+
       setResultado(data.roteiro);
 
       const partes = data.roteiro.split(/--- ATA OFICIAL ---|- ATA OFICIAL -|ATA OFICIAL/);
@@ -209,16 +216,27 @@ ${textoLimpo}
       setAtaEditada(ataTexto);
       setModoEdicaoAta(false);
 
-      setAbaDocumento('roteiro'); 
+      setAbaDocumento('roteiro');
     } catch (err) {
-      setErro(err.message || 'Erro inesperado ao gerar roteiro.');
+      const mensagem = err?.name === 'AbortError'
+        ? 'A IA demorou mais do que o esperado. Verifique a conexão e tente novamente.'
+        : err?.message || 'Erro inesperado ao gerar roteiro.';
+      setErro(mensagem);
+      mostrarToast(mensagem, 'alert');
     } finally {
+      window.clearTimeout(timeoutId);
       setLoading(false);
     }
   };
 
   const handleDownloadPDF = async () => {
-    if (!lideradoSelecionado) return mostrarToast("Erro de segurança: Liderado não identificado.");
+    if (!lideradoSelecionado) return mostrarToast('Erro de segurança: Liderado não identificado.');
+    if (!resultado || !resultado.trim()) {
+      return mostrarToast('Gere o roteiro primeiro para liberar a ata oficial.', 'alert');
+    }
+    if (resultado.trim().toLowerCase().includes('processando') || resultado.trim().toLowerCase().includes('erro')) {
+      return mostrarToast('O conteúdo da ata ainda não está pronto. Gere o roteiro novamente e tente outra vez.', 'alert');
+    }
 
     setModoEdicaoAta(false);
 
@@ -306,7 +324,6 @@ ${textoLimpo}
 
   const partesTexto = resultado.split(/--- ATA OFICIAL ---|- ATA OFICIAL -|ATA OFICIAL/);
   const roteiroConfidencial = partesTexto.length > 1 ? partesTexto[0].trim() : 'Roteiro em processamento...';
-  const ataParaRH = partesTexto.length > 1 ? partesTexto[1].trim() : resultado;
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-10 animate-[fadeIn_0.4s_ease-out]">
@@ -556,9 +573,9 @@ ${textoLimpo}
 
       {toast.visivel && (
         <div className={`fixed bottom-8 right-8 z-50 flex items-center gap-3 text-white px-6 py-4 rounded-xl shadow-2xl animate-[fadeIn_0.3s_ease-out] ${
-          toast.icone === 'shield' ? 'bg-amber-500 shadow-amber-500/30' : 'bg-emerald-500 shadow-emerald-500/30'
+          toast.icone === 'shield' ? 'bg-amber-500 shadow-amber-500/30' : toast.icone === 'alert' ? 'bg-red-500 shadow-red-500/30' : 'bg-emerald-500 shadow-emerald-500/30'
         }`}>
-          {toast.icone === 'shield' ? <ShieldCheck className="w-6 h-6 flex-shrink-0" /> : <CheckCircle2 className="w-6 h-6 flex-shrink-0" />}
+          {toast.icone === 'shield' ? <ShieldCheck className="w-6 h-6 flex-shrink-0" /> : toast.icone === 'alert' ? <AlertCircle className="w-6 h-6 flex-shrink-0" /> : <CheckCircle2 className="w-6 h-6 flex-shrink-0" />}
           <span className="font-semibold text-sm max-w-md leading-tight">{toast.mensagem}</span>
         </div>
       )}
