@@ -130,8 +130,10 @@ export default function HomeRH() {
     setIsDownloading(true);
     
     const elemento = document.getElementById('relatorio-dre');
+    
+    // Configuração com margens otimizadas para folha A4 e escala 2 para nitidez
     const opt = {
-      margin: 15,
+      margin: [15, 10, 15, 10], 
       filename: `Relatorio_DRE_ClearIT_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true },
@@ -142,7 +144,7 @@ export default function HomeRH() {
       html2pdf().set(opt).from(elemento).save().then(() => {
         setIsDownloading(false);
       });
-    }, 300);
+    }, 500); 
   };
 
   return (
@@ -383,75 +385,75 @@ export default function HomeRH() {
         </div>
       </div>
 
-      {/* 🔥 TEMPLATE INVISÍVEL PARA GERAÇÃO DO PDF (DRE) - FORMATADO PARA A4 🔥 */}
-      <div className="hidden">
-        <div id="relatorio-dre" className="bg-white text-slate-900 p-10 box-border" style={{ width: '794px' }}>
+      {/* 🔥 TEMPLATE INVISÍVEL PARA GERAÇÃO DO PDF (DRE) - FORMATADO E ALINHADO COM FLEXBOX 🔥 */}
+      <div className="absolute opacity-0 pointer-events-none" style={{ left: '-9999px', top: '-9999px' }}>
+        <div id="relatorio-dre" className="bg-white text-slate-900 p-8 box-border" style={{ width: '720px' }}>
           
           {/* Header do PDF */}
-          <div className="border-b-2 border-slate-300 pb-6 mb-8 flex justify-between items-end">
+          <div className="border-b-2 border-slate-300 pb-4 mb-6 flex justify-between items-end">
             <div>
-              <h1 className="text-4xl font-black text-slate-900 tracking-tight uppercase mb-2">ClearIT</h1>
-              <h2 className="text-xl font-bold text-slate-500">DRE - Demonstrativo de Resultado de Engajamento</h2>
+              <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase mb-1">ClearIT</h1>
+              <h2 className="text-sm font-bold text-slate-500">DRE - Demonstrativo de Resultado de Engajamento</h2>
             </div>
             <div className="text-right">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Data da Extração</p>
-              <p className="text-lg font-bold text-slate-800">{new Date().toLocaleDateString('pt-BR')}</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5 whitespace-nowrap">Data da Extração</p>
+              <p className="text-base font-bold text-slate-800">{new Date().toLocaleDateString('pt-BR')}</p>
             </div>
           </div>
 
           {/* Seção 1: Indicadores Globais */}
-          <div className="mb-10">
-            <h3 className="text-lg font-black uppercase text-slate-800 border-b-2 border-slate-200 pb-2 mb-6">1. Indicadores Globais</h3>
-            <div className="grid grid-cols-3 gap-6">
-              <div className="p-5 bg-slate-50 border border-slate-200 rounded-xl text-center shadow-sm">
-                <p className="text-[11px] font-bold uppercase text-slate-500 mb-2">Colaboradores na Base</p>
-                <p className="text-4xl font-black text-blue-600">{metricas.totalColaboradores}</p>
+          <div className="mb-8">
+            <h3 className="text-sm font-black uppercase text-slate-800 border-b border-slate-200 pb-1 mb-3">1. Indicadores Globais</h3>
+            <div className="flex justify-between gap-4">
+              <div className="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-lg text-center">
+                <p className="text-[9px] font-bold uppercase text-slate-500 mb-1">Colaboradores na Base</p>
+                <p className="text-2xl font-black text-blue-600">{metricas.totalColaboradores}</p>
               </div>
-              <div className="p-5 bg-slate-50 border border-slate-200 rounded-xl text-center shadow-sm">
-                <p className="text-[11px] font-bold uppercase text-slate-500 mb-2">PDIs Ativos</p>
-                <p className="text-4xl font-black text-emerald-600">{metricas.pdisAtivos}</p>
+              <div className="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-lg text-center">
+                <p className="text-[9px] font-bold uppercase text-slate-500 mb-1">PDIs Ativos</p>
+                <p className="text-2xl font-black text-emerald-600">{metricas.pdisAtivos}</p>
               </div>
-              <div className="p-5 bg-slate-50 border border-slate-200 rounded-xl text-center shadow-sm">
-                <p className="text-[11px] font-bold uppercase text-slate-500 mb-2">Atas de Mentoria</p>
-                <p className="text-4xl font-black text-purple-600">{metricas.atasGeradas}</p>
+              <div className="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-lg text-center">
+                <p className="text-[9px] font-bold uppercase text-slate-500 mb-1">Atas de Mentoria</p>
+                <p className="text-2xl font-black text-purple-600">{metricas.atasGeradas}</p>
               </div>
             </div>
           </div>
 
-          {/* Seção 2 e 3: Gráficos de Saúde */}
-          <div className="grid grid-cols-2 gap-10 mb-10">
-            <div>
-              <h3 className="text-lg font-black uppercase text-slate-800 border-b-2 border-slate-200 pb-2 mb-6">2. Compliance de 1:1s</h3>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center p-4 bg-emerald-50 border border-emerald-200 rounded-xl shadow-sm">
-                  <span className="font-bold text-emerald-800 text-sm uppercase">Reuniões Em Dia</span>
-                  <span className="font-black text-2xl text-emerald-600">{cadencia.emDia}</span>
+          {/* Seção 2 e 3: Gráficos de Saúde (Alinhados Lado a Lado usando Flex) */}
+          <div className="flex justify-between gap-6 mb-8">
+            <div className="w-[48%]">
+              <h3 className="text-sm font-black uppercase text-slate-800 border-b border-slate-200 pb-1 mb-3">2. Compliance de 1:1s</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg">
+                  <span className="font-bold text-emerald-800 text-[10px] uppercase">Reuniões Em Dia</span>
+                  <span className="font-black text-lg text-emerald-600 leading-none">{cadencia.emDia}</span>
                 </div>
-                <div className="flex justify-between items-center p-4 bg-rose-50 border border-rose-200 rounded-xl shadow-sm">
-                  <span className="font-bold text-rose-800 text-sm uppercase">Atrasadas / Sem Data</span>
-                  <span className="font-black text-2xl text-rose-600">{cadencia.atrasadas}</span>
+                <div className="flex justify-between items-center p-2.5 bg-rose-50 border border-rose-200 rounded-lg">
+                  <span className="font-bold text-rose-800 text-[10px] uppercase">Atrasadas / Sem Data</span>
+                  <span className="font-black text-lg text-rose-600 leading-none">{cadencia.atrasadas}</span>
                 </div>
               </div>
             </div>
 
-            <div>
-              <h3 className="text-lg font-black uppercase text-slate-800 border-b-2 border-slate-200 pb-2 mb-6">3. Termômetro (Burnout)</h3>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center text-sm border-b border-slate-100 pb-2">
+            <div className="w-[48%]">
+              <h3 className="text-sm font-black uppercase text-slate-800 border-b border-slate-200 pb-1 mb-3">3. Termômetro (Burnout)</h3>
+              <div className="space-y-2.5">
+                <div className="flex justify-between items-center text-[10px] border-b border-slate-100 pb-1">
                   <span className="font-bold text-emerald-600 uppercase">🚀 Motivado / Energizado</span>
-                  <span className="font-black text-lg">{Math.round((sentimento.motivado / totalSentimento) * 100)}%</span>
+                  <span className="font-black text-sm leading-none">{Math.round((sentimento.motivado / totalSentimento) * 100)}%</span>
                 </div>
-                <div className="flex justify-between items-center text-sm border-b border-slate-100 pb-2">
+                <div className="flex justify-between items-center text-[10px] border-b border-slate-100 pb-1">
                   <span className="font-bold text-blue-600 uppercase">🎯 Focado nas entregas</span>
-                  <span className="font-black text-lg">{Math.round((sentimento.focado / totalSentimento) * 100)}%</span>
+                  <span className="font-black text-sm leading-none">{Math.round((sentimento.focado / totalSentimento) * 100)}%</span>
                 </div>
-                <div className="flex justify-between items-center text-sm border-b border-slate-100 pb-2">
+                <div className="flex justify-between items-center text-[10px] border-b border-slate-100 pb-1">
                   <span className="font-bold text-amber-600 uppercase">🚧 Precisando de Ajuda</span>
-                  <span className="font-black text-lg">{Math.round((sentimento.bloqueado / totalSentimento) * 100)}%</span>
+                  <span className="font-black text-sm leading-none">{Math.round((sentimento.bloqueado / totalSentimento) * 100)}%</span>
                 </div>
-                <div className="flex justify-between items-center text-sm border-b border-slate-100 pb-2">
+                <div className="flex justify-between items-center text-[10px] border-b border-slate-100 pb-1">
                   <span className="font-bold text-rose-600 uppercase">🔋 Sobrecarga / Risco</span>
-                  <span className="font-black text-rose-600 text-lg">{percSobrecarga}%</span>
+                  <span className="font-black text-rose-600 text-sm leading-none">{percSobrecarga}%</span>
                 </div>
               </div>
             </div>
@@ -459,37 +461,36 @@ export default function HomeRH() {
 
           {/* Seção 4: Lideranças em Risco */}
           <div>
-            <h3 className="text-lg font-black uppercase text-slate-800 border-b-2 border-slate-200 pb-2 mb-6">4. Ofensores de Cadência (Líderes)</h3>
-            <div className="border border-slate-300 rounded-xl overflow-hidden">
-              <table className="table-fixed w-full text-left border-collapse">
+            <h3 className="text-sm font-black uppercase text-slate-800 border-b border-slate-200 pb-1 mb-3">4. Ofensores de Cadência (Líderes)</h3>
+            <div className="border border-slate-300 rounded-lg overflow-hidden">
+              <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-slate-100 text-xs uppercase tracking-wider text-slate-600 border-b border-slate-300">
-                    <th className="p-4 w-1/2">Nome do Líder</th>
-                    <th className="p-4 w-1/4 text-center">Membros no Squad</th>
-                    <th className="p-4 w-1/4 text-center">1:1s Atrasadas</th>
+                  <tr className="bg-slate-100 text-[9px] uppercase tracking-wider text-slate-600 border-b border-slate-300">
+                    <th className="p-2 w-[50%] font-bold">Nome do Líder</th>
+                    <th className="p-2 w-[25%] text-center font-bold">Membros no Squad</th>
+                    <th className="p-2 w-[25%] text-center font-bold">1:1s Atrasadas</th>
                   </tr>
                 </thead>
-                <tbody className="text-sm divide-y divide-slate-200">
+                <tbody className="text-[11px] divide-y divide-slate-200">
                   {lideresRisco.slice(0, 8).map(lider => (
                     <tr key={lider.id} className="bg-white">
-                      <td className="p-4 font-bold text-slate-800">{lider.nome}</td>
-                      <td className="p-4 text-center text-slate-600">{lider.totalLiderados}</td>
-                      <td className="p-4 text-center font-black text-rose-600 text-base">{lider.atrasadas}</td>
+                      <td className="p-2 font-bold text-slate-800">{lider.nome}</td>
+                      <td className="p-2 text-center text-slate-600">{lider.totalLiderados}</td>
+                      <td className="p-2 text-center font-black text-rose-600">{lider.atrasadas}</td>
                     </tr>
                   ))}
                   {lideresRisco.length === 0 && (
-                    <tr><td colSpan="3" className="p-6 text-center text-slate-500 font-medium">Todos os líderes estão com a cadência em dia.</td></tr>
+                    <tr><td colSpan="3" className="p-4 text-center text-slate-500 font-medium">Todos os líderes estão com a cadência em dia.</td></tr>
                   )}
                 </tbody>
               </table>
             </div>
-            {lideresRisco.length > 8 && <p className="text-xs text-slate-500 mt-3 font-semibold">* Exibindo apenas os Top 8 ofensores para formatação.</p>}
           </div>
 
           {/* Footer do PDF */}
-          <div className="mt-16 pt-6 border-t-2 border-slate-200 text-center text-xs text-slate-500 font-medium">
-            <p className="mb-1">Este documento é confidencial e de uso interno do setor de Recursos Humanos e Governança[cite: 1].</p>
-            <p>Gerado automaticamente pela plataforma ClearIT - Agent-First Leadership[cite: 1].</p>
+          <div className="mt-8 pt-4 border-t border-slate-200 text-center text-[9px] text-slate-500 font-medium">
+            <p className="mb-0.5">Este documento é confidencial e de uso interno do setor de Recursos Humanos e Governança.</p>
+            <p>Gerado automaticamente pela plataforma ClearIT - Agent-First Leadership.</p>
           </div>
 
         </div>

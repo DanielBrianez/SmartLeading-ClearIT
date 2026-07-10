@@ -354,7 +354,7 @@ export default function MeuSquad({ setAbaAtiva }) {
         </div>
       </div>
 
-      {/* GRID DE COLABORADORES (NOVA UI) */}
+      {/* GRID DE COLABORADORES */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {squadFiltrado.map(membro => (
           <div key={membro.id} className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
@@ -394,7 +394,7 @@ export default function MeuSquad({ setAbaAtiva }) {
         )}
       </div>
 
-      {/* MODAL DE PERFIL COMPLETO (GLASSMORPHISM + FUNÇÕES ANTIGAS) */}
+      {/* MODAL DE PERFIL COMPLETO */}
       {membroSelecionado && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={fecharPerfil}></div>
@@ -571,7 +571,7 @@ export default function MeuSquad({ setAbaAtiva }) {
                 </div>
               )}
 
-              {/* --- ABA 2: PDI (NOVA UI + FUNCIONALIDADE ANTIGA) --- */}
+              {/* --- ABA 2: PDI --- */}
               {abaModal === 'pdi' && (
                 <div className="space-y-6 animate-[fadeIn_0.3s]">
                   <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl p-6 text-white shadow-lg">
@@ -584,7 +584,7 @@ export default function MeuSquad({ setAbaAtiva }) {
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Radar de Competências (Mágica Dinâmica) */}
+                    {/* Radar de Competências */}
                     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
                       <h3 className="text-base font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
                         <Award className="w-5 h-5 text-amber-500" /> Radar de Competências
@@ -690,22 +690,6 @@ export default function MeuSquad({ setAbaAtiva }) {
                   </div>
                 </div>
               )}
-            </div>
-
-            {/* Footer do Modal (Navegação Rápida) */}
-            <div className="p-6 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex flex-col sm:flex-row gap-3 flex-shrink-0">
-              <button 
-                onClick={() => { fecharPerfil(); if(setAbaAtiva) setAbaAtiva('pdi'); }}
-                className="flex-1 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold rounded-xl shadow-sm flex items-center justify-center gap-2 hover:bg-slate-50"
-              >
-                <Target className="w-4 h-4" /> Criar Metas SMART
-              </button>
-              <button 
-                onClick={() => { localStorage.setItem('@clearit-liderado-foco', membroSelecionado.id); fecharPerfil(); if(setAbaAtiva) setAbaAtiva('1a1'); }}
-                className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-2"
-              >
-                <TrendingUp className="w-4 h-4" /> Gerar Pauta 1:1
-              </button>
             </div>
             
           </div>

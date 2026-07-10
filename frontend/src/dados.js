@@ -1,5 +1,3 @@
-import minhaFoto from './assets/daniel-foto.jpg';
-
 export const LEADERS = [
 'Selecione...', 
 'Roberto Almeida', 
@@ -17,7 +15,7 @@ export const MENTEES = [
 ];
 
 export const TEAM_MEMBERS = [
-  { id: 1, name: 'Daniel Nascimento', role: 'Tech Lead', color: '2563EB', foto: minhaFoto },
+  { id: 1, name: 'Daniel Nascimento', role: 'Tech Lead', color: '2563EB'},
   { id: 2, name: 'Yasmim Dias', role: 'Product Owner', color: '059669' },
   { id: 3, name: 'Vinicio Rocha', role: 'DBA', color: '7C3AED' },
   { id: 4, name: 'Vinicius Pires', role: 'Quality Assurance', color: 'DC2626' },

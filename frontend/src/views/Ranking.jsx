@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { 
   Filter, Crown, Star, Lock, TrendingUp, Activity, FileText, Target, Zap 
 } from 'lucide-react';
-import minhaFoto from '../assets/daniel-foto.jpg'; 
 import { DB_SQUADS } from '../dados'; 
 import { lerLGPD } from '../utils/security'; 
 
@@ -60,7 +59,7 @@ export default function Ranking() {
     const ritosRealizados = atasGeradas + meuTime.length; 
 
     const baseCompetidores = [
-      { id: 'daniel_nascimento', nome: 'Daniel Nascimento', cargo: 'Tech Lead', area: 'Engenharia', foto: minhaFoto, atasBase: 0, pdisBase: 0, ritosBase: 0, xpBase: 0 },
+      { id: 'daniel_nascimento', nome: 'Daniel Nascimento', cargo: 'Tech Lead', area: 'Engenharia', atasBase: 0, pdisBase: 0, ritosBase: 0, xpBase: 0 },
       { id: 'juliana_castro', nome: 'Juliana Castro', cargo: 'Tech Lead', area: 'Produto', atasBase: 12, pdisBase: 4, ritosBase: 15, xpBase: 1450 },
       { id: 'marcos_vinicius', nome: 'Marcos Vinícius', cargo: 'Engenheiro Sênior', area: 'Engenharia', atasBase: 25, pdisBase: 8, ritosBase: 28, xpBase: 3100 },
       { id: 'sara_lima', nome: 'Sara Lima', cargo: 'Agile Coach', area: 'Operações', atasBase: 8, pdisBase: 2, ritosBase: 10, xpBase: 850 },
@@ -180,10 +179,10 @@ export default function Ranking() {
         </div>
       </div>
 
-      {/* FILTRO DE ÁREA DE ATUAÇÃO (MANTIDO DO SEU CÓDIGO) */}
+      {/* FILTRO DE ÁREA DE ATUAÇÃO */}
       <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-300">
-          <Filter className="w-4 h-4 text-blue-500" />
+          <Filter className="w-4 h-4 text-blue-500 flex-shrink-0" />
           Filtrar por Área:
         </div>
         <div className="flex gap-2 overflow-x-auto hide-scrollbar">
@@ -203,14 +202,16 @@ export default function Ranking() {
         </div>
       </div>
 
-      {/* PÓDIO DOS TOP 3 (NOVA UI ANIMADA) */}
+      {/* PÓDIO DOS TOP 3 */}
       {top3.length > 0 && (
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-sm border border-slate-200 dark:border-slate-800">
-          <h2 className="text-center text-sm font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-12 flex items-center justify-center gap-2">
-            <Star className="w-4 h-4" /> Top 3 Lideranças
+          <h2 className="relative z-10 text-center text-sm font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-8 flex flex-row items-center justify-center gap-2">
+            <Star className="w-5 h-5 flex-shrink-0" /> 
+            <span>Top 3 Lideranças</span>
           </h2>
           
-          <div className="flex flex-col md:flex-row items-end justify-center gap-4 md:gap-8 px-4 h-auto md:h-64">
+          {/* 👇 CORREÇÃO CRUCIAL AQUI: Removido o "h-64" ou travamento de altura. Agora os itens crescem livremente e alinham pela base sem invadir o teto! */}
+          <div className="flex flex-col md:flex-row items-center md:items-end justify-center gap-4 md:gap-8 px-4 mt-4">
             
             {/* SEGUNDO LUGAR */}
             {top3[1] && (
@@ -271,12 +272,12 @@ export default function Ranking() {
         </div>
       )}
 
-      {/* RESTANTE DO RANKING (TABELA DETALHADA - MANTIDA DO SEU CÓDIGO) */}
+      {/* RESTANTE DO RANKING (TABELA DETALHADA) */}
       {resto.length > 0 && (
         <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
           <div className="p-6 border-b border-slate-200 dark:border-slate-800">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-blue-500" /> Top Desafiantes
+              <TrendingUp className="w-5 h-5 text-blue-500 flex-shrink-0" /> Top Desafiantes
             </h2>
           </div>
           
@@ -299,7 +300,7 @@ export default function Ranking() {
                         <h3 className={`font-bold text-lg leading-none ${lider.isMe ? 'text-blue-700 dark:text-blue-400' : 'text-slate-900 dark:text-white'}`}>
                           {lider.nome} {lider.isMe && '(Você)'}
                         </h3>
-                        <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded border ${lider.patente.cor} ${lider.patente.bg} ${lider.patente.border}`}>
+                        <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded border whitespace-nowrap ${lider.patente.cor} ${lider.patente.bg} ${lider.patente.border}`}>
                           {lider.patente.nome.split(' ')[0]}
                         </span>
                       </div>
@@ -317,7 +318,7 @@ export default function Ranking() {
                     </div>
 
                     <div className={`flex items-center gap-1.5 font-bold text-2xl leading-none ${lider.isMe ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300'}`}>
-                      <Zap className="w-6 h-6" />
+                      <Zap className="w-6 h-6 flex-shrink-0" />
                       {lider.xpTotal} <span className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">XP</span>
                     </div>
                   </div>
