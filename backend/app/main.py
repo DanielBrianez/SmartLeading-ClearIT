@@ -16,6 +16,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",  # A porta padrão
         "http://localhost:5174"   # <--- ADICIONE A PORTA NOVA AQUI!
+        "https://smart-leading-clear-fwvqopn1o-24-plus-1.vercel.app", # A URL do seu front
+        "*"
     ], 
     allow_credentials=True,
     allow_methods=["*"],
