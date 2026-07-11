@@ -206,6 +206,7 @@ ${textoLimpo}
           perfil_lideranca: perfilLider,
           senioridade_liderado: senioridade,
           tempo_casa: tempoCasa,
+          perfil_comportamental: perfilLiderado,
           meeting_type: meetingType,
           resumo_entregas: historicoOculto,
           // Novas variáveis esperadas pela API
