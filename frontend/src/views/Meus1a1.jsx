@@ -199,7 +199,7 @@ ${textoLimpo}
       `;
 
       // 👇 ATUALIZADO: Payload enviado ao back-end agora inclui os parâmetros novos!
-      const response = await fetch('http://localhost:8000/api/gerar-roteiro', {
+      const response = await fetch('https://smartleading-clearit.onrender.com/gerar-roteiro', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -328,7 +328,7 @@ ${textoLimpo}
       setTimeout(() => { if (setAbaAtiva) setAbaAtiva('Home'); }, 2000);
 
       try {
-        await fetch('http://localhost:8000/api/registrar-download', {
+        await fetch('https://smartleading-clearit.onrender.com/api/registrar-download', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ lider: nomeLiderLogado, senioridade: senioridade, perfil_comportamental: perfilLiderado })
@@ -447,7 +447,7 @@ ${textoLimpo}
                   type="button"
                   onClick={async () => {
                     try {
-                      const res = await fetch('http://localhost:8000/api/pauta-templates');
+                      const res = await fetch('https://smartleading-clearit.onrender.com/api/pauta-templates');
                       const data = await res.json();
                       setPautaTemplates(data);
                       const template = data[meetingType];

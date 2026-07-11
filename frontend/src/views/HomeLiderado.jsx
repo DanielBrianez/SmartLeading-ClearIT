@@ -53,7 +53,7 @@ export default function HomeLiderado() {
     try {
       const dataReuniaoExibicao = dataReuniao || 'Hoje';
       
-      const response = await fetch('http://localhost:8000/api/notificar-teams', {
+      const response = await fetch('https://smartleading-clearit.onrender.com/notificar-teams', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -261,7 +261,7 @@ export default function HomeLiderado() {
 
   const simularDisparoAlertaTeams = async () => {
     try {
-      await fetch('http://localhost:8000/api/disparar-alerta-teams', {
+      await fetch('https://smartleading-clearit.onrender.com/disparar-alerta-teams', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -281,7 +281,7 @@ export default function HomeLiderado() {
       const sentimentoMock = "🚀 Motivado e Energizado";
       const pautaMock = "Alinhamento de carreira e transição de squad (Enviado direto do Teams)";
       
-      const response = await fetch('http://localhost:8000/api/receber-resposta-teams', {
+      const response = await fetch('https://smartleading-clearit.onrender.com/receber-resposta-teams', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
