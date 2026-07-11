@@ -71,7 +71,7 @@ def gerar_roteiro_ia(dados: dict) -> str:
         )
 
     try:
-        model = genai.GenerativeModel('gemini-1.0-pro')
+        model = genai.GenerativeModel('gemini-3.5-flash')
 
         prompt = f"""
         Você é um Mentor Executivo e parceiro de RH estratégico da empresa Clear IT.
