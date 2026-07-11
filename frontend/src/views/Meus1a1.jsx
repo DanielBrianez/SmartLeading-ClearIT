@@ -199,7 +199,7 @@ ${textoLimpo}
       `;
 
       // 👇 ATUALIZADO: Payload enviado ao back-end agora inclui os parâmetros novos!
-      const response = await fetch('https://smartleading-clearit.onrender.com/gerar-roteiro', {
+      const response = await fetch('https://smartleading-clearit.onrender.com/api/gerar-roteiro', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
